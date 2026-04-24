@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+    <title>Sales Dashboard · Fast & Lite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f4f6fa;
+            padding: 0 0 40px 0;
+            color: #1a2634;
+        }
+        .dashboard-container {
+            max-width: 580px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+        .app-header {
+            background: white;
+            padding: 10px 16px;
+            border-bottom: 1px solid #eef2f8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(8px);
+            background: rgba(255,255,255,0.96);
+            margin-bottom: 20px;
+        }
+        .header-left { width: 44px; }
+        .refresh-icon, .store-icon-btn {
+            background: #f0f3f9;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 30px;
+            font-size: 1.4rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .refresh-icon:active, .store-icon-btn:active {
+            background: #e0e6f0;
+            transform: scale(0.96);
+        }
+        .date-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f0f3f9;
+            border-radius: 60px;
+            padding: 2px 8px;
+        }
+        .arrow-btn {
+            background: transparent;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.1s;
+            color: #2c3e66;
+        }
+        .arrow-btn:active { background: #dce3ec; }
+        .date-label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            background: transparent;
+            border: none;
+            padding: 6px 8px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        /* modal styles (unchanged) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(3px);
+            z-index: 1000;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.2s;
+        }
+        .modal-overlay.active { visibility: visible; opacity: 1; }
+        .modal-bottom {
+            background: white;
+            width: 100%;
+            max-width: 520px;
+            border-radius: 32px 32px 0 0;
+            padding: 24px 20px 32px;
+            transform: translateY(100%);
+            transition: transform 0.25s ease-out;
+        }
+        .active .modal-bottom { transform: translateY(0); }
+        .modal-title {
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .store-option, .preset-option {
+            background: #f8fafd;
+            padding: 14px 18px;
+            margin-bottom: 10px;
+            border-radius: 60px;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            border: 1px solid #eef2f8;
+        }
+        .close-modal {
+            margin-top: 20px;
+            background: none;
+            border: 1px solid #cfdfed;
+            padding: 12px;
+            border-radius: 60px;
+            width: 100%;
+            cursor: pointer;
+        }
+        .date-range-custom {
+            margin-top: 16px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .date-range-custom input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 30px;
+            border: 1px solid #dce3ec;
+        }
+        .apply-custom {
+            background: #1e4668;
+            color: white;
+            border: none;
+            border-radius: 40px;
+            padding: 10px 18px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .divider { height: 1px; background: #eef2f8; margin: 16px 0; }
+        /* KPI & cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .kpi-card {
+            background: white;
+            border-radius: 28px;
+            padding: 16px 12px;
+            border: 1px solid #eef2f8;
+            transition: all 0.1s;
+        }
+        .kpi-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6c7f9c;
+        }
+        .kpi-value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #1a2c42;
+            margin-top: 8px;
+        }
+        .payment-breakdown {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .payment-item {
+            flex: 1;
+            text-align: center;
+            background: #f9fbfd;
+            border-radius: 24px;
+            padding: 10px 6px;
+        }
+        .section-card {
+            background: white;
+            border-radius: 28px;
+            padding: 18px 16px;
+            margin-bottom: 24px;
+            border: 1px solid #eef2f8;
+        }
+        .section-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            border-left: 4px solid #2b6e9e;
+            padding-left: 12px;
+        }
+        .mini-table {
+            width: 100%;
+            font-size: 0.8rem;
+            border-collapse: collapse;
+        }
+        .mini-table th, .mini-table td { padding: 12px 6px; text-align: left; border-bottom: 1px solid #ecf0f5; }
+        .badge { background: #eef2ff; border-radius: 30px; padding: 2px 8px; font-size: 0.7rem; }
+        .error-toast {
+            background: #fee2e2;
+            border-radius: 60px;
+            padding: 10px 16px;
+            margin-bottom: 16px;
+            color: #b91c1c;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f2f5 25%, #e9ecef 50%, #f0f2f5 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.2s infinite;
+            border-radius: 12px;
+        }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .kpi-skeleton { height: 64px; width: 100%; }
+        canvas { max-height: 220px; width: 100%; }
+        @media (max-width: 480px) {
+            .kpi-value { font-size: 1.5rem; }
+            .date-label { font-size: 0.7rem; }
+        }
+    </style>
+</head>
+<body>
+<div class="app-header">
+    <div class="header-left"><button class="refresh-icon" id="headerRefreshBtn">⟳</button></div>
+    <div class="date-control">
+        <button class="arrow-btn" id="leftArrowBtn">←</button>
+        <button class="date-label" id="dateTriggerBtn"><span id="dateRangeLabel">Today</span></button>
+        <button class="arrow-btn" id="rightArrowBtn">→</button>
+    </div>
+    <button class="store-icon-btn" id="storeIconBtn">🏬</button>
+</div>
+<div class="dashboard-container">
+    <div id="errorMsg" style="display: none;" class="error-toast"></div>
+    <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card"><div class="kpi-label">TOTAL SALES (RM)</div><div class="kpi-value skeleton" style="height: 40px; width: 80%; margin-top: 8px;"></div></div>
+        <div class="kpi-card"><div class="kpi-label">TRANSACTIONS</div><div class="kpi-value skeleton" style="height: 40px; width: 60%;"></div></div>
+        <div class="kpi-card"><div class="kpi-label">ITEMS SOLD</div><div class="kpi-value skeleton" style="height: 40px; width: 70%;"></div></div>
+        <div class="kpi-card"><div class="kpi-label">AVG. TICKET</div><div class="kpi-value skeleton" style="height: 40px; width: 65%;"></div></div>
+    </div>
+    <div class="section-card"><div class="section-title">💵 Payment Breakdown</div><div class="payment-breakdown" id="paymentBreakdown">...</div></div>
+    <div class="section-card"><div class="section-title">📈 Sales Trend</div><canvas id="trendChart"></canvas></div>
+    <div class="section-card"><div class="section-title">🏆 Top Products</div><div id="productsList"><div class="skeleton" style="height: 200px;"></div></div></div>
+    <div class="section-card"><div class="section-title">👥 Staff Performance</div><canvas id="employeeChart"></canvas><div id="employeeFallback"></div></div>
+</div>
+
+<!-- Modals (store + date) -->
+<div id="storeModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">🏬 Select Store</div>
+    <div class="store-option" data-store="queens">Queensbay Mall</div><div class="store-option" data-store="sunshine">Sunshine Square</div>
+    <div class="store-option" data-store="gurney_paragon">Gurney Paragon</div><button class="close-modal" id="closeStoreModal">Cancel</button></div></div>
+<div id="dateModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">📅 Select Range</div>
+    <div class="preset-option" data-preset="today">Today</div><div class="preset-option" data-preset="week">This Week</div>
+    <div class="preset-option" data-preset="month">This Month</div><div class="preset-option" data-preset="year">This Year</div>
+    <div class="divider"></div><div class="preset-option" data-preset="custom">📆 Custom</div>
+    <div id="customDateRange" style="display: none;"><div class="date-range-custom"><input type="date" id="customFromDate"><input type="date" id="customToDate"><button class="apply-custom" id="applyCustomBtn">Apply</button></div></div>
+    <button class="close-modal" id="closeDateModal">Close</button></div></div>
+
+<script>
+    // ========== CONFIG ==========
+    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzfrWUxI6MiAc05CRNV5IRlTXg7pJiOqlMBCGGQISBcl1FFtkmfUwMmflEhm6tyCAr6qg/exec";
+    const CACHE_TTL_MS = 30 * 1000; // 30 seconds cache for fast interaction
+    
+    // DOM elements
+    const refreshBtn = document.getElementById('headerRefreshBtn');
+    const storeIconBtn = document.getElementById('storeIconBtn');
+    const dateTriggerBtn = document.getElementById('dateTriggerBtn');
+    const leftArrow = document.getElementById('leftArrowBtn');
+    const rightArrow = document.getElementById('rightArrowBtn');
+    const dateRangeLabelSpan = document.getElementById('dateRangeLabel');
+    const errorDiv = document.getElementById('errorMsg');
+    
+    // State
+    let currentStore = "queens";
+    let currentFrom = "", currentTo = "";
+    let currentPresetType = "day";    // day, week, month, year, custom
+    let currentDayDate = null;
+    let pendingRequest = false;
+    let debounceTimer = null;
+    
+    // Simple in-memory cache
+    const cache = new Map();
+    function getCacheKey(action, store, from, to) { return `${action}|${store}|${from}|${to}`; }
+    function getCached(action, store, from, to) {
+        const key = getCacheKey(action, store, from, to);
+        const entry = cache.get(key);
+        if (entry && (Date.now() - entry.timestamp) < CACHE_TTL_MS) return entry.data;
+        return null;
+    }
+    function setCache(action, store, from, to, data) {
+        const key = getCacheKey(action, store, from, to);
+        cache.set(key, { data, timestamp: Date.now() });
+    }
+    
+    // Helper dates
+    function formatYMD(date) {
+        return date.toISOString().split('T')[0];
+    }
+    function getWeekStart(date) {
+        let d = new Date(date);
+        const day = d.getDay();
+        const diff = (day === 0 ? -6 : 1 - day);
+        d.setDate(d.getDate() + diff);
+        return d;
+    }
+    
+    // Apply preset (fast, no fetch yet)
+    function applyPreset(preset, customFrom = null, customTo = null) {
+        const today = new Date(); today.setHours(0,0,0,0);
+        if (preset === 'custom' && customFrom && customTo) {
+            currentPresetType = 'custom';
+            currentFrom = customFrom;
+            currentTo = customTo;
+            currentPresetLabel = `${customFrom} → ${customTo}`;
+            dateRangeLabelSpan.innerText = currentPresetLabel;
+            refreshDashboard();
+            return;
+        }
+        if (preset === 'today') {
+            currentPresetType = 'day';
+            currentDayDate = new Date(today);
+            currentFrom = formatYMD(currentDayDate);
+            currentTo = formatYMD(currentDayDate);
+            dateRangeLabelSpan.innerText = formatYMD(currentDayDate);
+            refreshDashboard();
+            return;
+        }
+        if (preset === 'week') {
+            let start = getWeekStart(today);
+            let end = new Date(start); end.setDate(start.getDate() + 6);
+            currentPresetType = 'week';
+            currentFrom = formatYMD(start);
+            currentTo = formatYMD(end);
+            dateRangeLabelSpan.innerText = `Week of ${formatYMD(start)}`;
+            refreshDashboard();
+            return;
+        }
+        if (preset === 'month') {
+            let start = new Date(today.getFullYear(), today.getMonth(), 1);
+            let end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            currentPresetType = 'month';
+            currentFrom = formatYMD(start);
+            currentTo = formatYMD(end);
+            dateRangeLabelSpan.innerText = start.toLocaleString('default', { month: 'long', year: 'numeric' });
+            refreshDashboard();
+            return;
+        }
+        if (preset === 'year') {
+            let start = new Date(today.getFullYear(), 0, 1);
+            let end = new Date(today.getFullYear(), 11, 31);
+            currentPresetType = 'year';
+            currentFrom = formatYMD(start);
+            currentTo = formatYMD(end);
+            dateRangeLabelSpan.innerText = `${today.getFullYear()}`;
+            refreshDashboard();
+        }
+    }
+    
+    // Arrow shift (optimistic UI update)
+    function shiftDateRange(direction) {
+        if (pendingRequest) return;
+        const delta = direction === 'left' ? -1 : 1;
+        if (currentPresetType === 'custom') { showError("Custom range cannot be shifted. Select preset."); return; }
+        if (currentPresetType === 'day') {
+            if (!currentDayDate) currentDayDate = new Date();
+            let newDate = new Date(currentDayDate);
+            newDate.setDate(currentDayDate.getDate() + delta);
+            currentDayDate = newDate;
+            currentFrom = formatYMD(currentDayDate);
+            currentTo = formatYMD(currentDayDate);
+            dateRangeLabelSpan.innerText = formatYMD(currentDayDate);
+            refreshDashboard();
+            return;
+        }
+        if (currentPresetType === 'week') {
+            let start = new Date(currentFrom);
+            if (isNaN(start.getTime())) start = getWeekStart(new Date());
+            let newStart = new Date(start);
+            newStart.setDate(start.getDate() + delta * 7);
+            let newEnd = new Date(newStart); newEnd.setDate(newStart.getDate() + 6);
+            currentFrom = formatYMD(newStart);
+            currentTo = formatYMD(newEnd);
+            dateRangeLabelSpan.innerText = `Week of ${formatYMD(newStart)}`;
+            refreshDashboard();
+            return;
+        }
+        if (currentPresetType === 'month') {
+            let start = new Date(currentFrom);
+            if (isNaN(start.getTime())) start = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+            let newStart = new Date(start);
+            newStart.setMonth(start.getMonth() + delta);
+            let newEnd = new Date(newStart.getFullYear(), newStart.getMonth() + 1, 0);
+            currentFrom = formatYMD(newStart);
+            currentTo = formatYMD(newEnd);
+            dateRangeLabelSpan.innerText = newStart.toLocaleString('default', { month: 'long', year: 'numeric' });
+            refreshDashboard();
+            return;
+        }
+        if (currentPresetType === 'year') {
+            let start = new Date(currentFrom);
+            if (isNaN(start.getTime())) start = new Date(new Date().getFullYear(), 0, 1);
+            let newYear = start.getFullYear() + delta;
+            let newStart = new Date(newYear, 0, 1);
+            let newEnd = new Date(newYear, 11, 31);
+            currentFrom = formatYMD(newStart);
+            currentTo = formatYMD(newEnd);
+            dateRangeLabelSpan.innerText = `${newYear}`;
+            refreshDashboard();
+        }
+    }
+    
+    // API with cache
+    async function fetchApi(action, store, from, to) {
+        const cached = getCached(action, store, from, to);
+        if (cached) return cached;
+        const params = { action, store, from, to };
+        if (action === 'getSalesReport') params.employeeId = 'all', params.unsettledOnly = 'false';
+        if (action === 'getSalesChartData' || action === 'getProductSalesReport' || action === 'getEmployeeSalesData') params.employeeId = 'all';
+        const urlParams = new URLSearchParams(params);
+        const url = `${BACKEND_URL}?${urlParams.toString()}`;
+        const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data && data.success === false) throw new Error(data.error || "API error");
+        setCache(action, store, from, to, data);
+        return data;
+    }
+    
+    // Optimized parallel fetch with caching
+    async function fetchAllData(store, from, to) {
+        const [sales, chart, products, employees] = await Promise.all([
+            fetchApi('getSalesReport', store, from, to),
+            fetchApi('getSalesChartData', store, from, to),
+            fetchApi('getProductSalesReport', store, from, to),
+            fetchApi('getEmployeeSalesData', store, from, to)
+        ]);
+        return { sales, chart, products, employees };
+    }
+    
+    // UI update helpers (fast direct DOM)
+    function formatMYR(v) { return `RM ${(v || 0).toFixed(2)}`; }
+    function formatNumber(v) { return (parseInt(v) || 0).toLocaleString(); }
+    
+    let trendChart = null, employeeChart = null;
+    function updateUI(data) {
+        const { sales, chart, products, employees } = data;
+        // KPIs
+        document.getElementById('totalSales').innerHTML = formatMYR(sales.totalSales);
+        document.getElementById('txnCount').innerHTML = formatNumber(sales.transactionCount);
+        document.getElementById('itemsSold').innerHTML = formatNumber(sales.totalItems);
+        const avg = sales.transactionCount ? sales.totalSales / sales.transactionCount : 0;
+        document.getElementById('avgTicket').innerHTML = formatMYR(avg);
+        document.getElementById('cashAmount').innerHTML = formatMYR(sales.cashTotal);
+        document.getElementById('cardAmount').innerHTML = formatMYR(sales.cardTotal);
+        document.getElementById('alipayAmount').innerHTML = formatMYR(sales.alipayTotal);
+        document.getElementById('otherAmount').innerHTML = formatMYR(sales.otherTotal);
+        const refundPos = (sales.refundTotal || 0) * -1;
+        document.getElementById('refundAmount').innerHTML = formatMYR(refundPos > 0 ? refundPos : 0);
+        // Trend chart
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        if (trendChart) trendChart.destroy();
+        let labels = [], values = [];
+        if (chart.type === 'hourly' && chart.hourly) { labels = chart.hourly.labels; values = chart.hourly.data; }
+        else if (chart.salesByDay) { labels = chart.salesByDay.labels; values = chart.salesByDay.data; }
+        trendChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: 'Sales (RM)', data: values, borderColor: '#2b6e9e', backgroundColor: 'rgba(43,110,158,0.05)', tension: 0.3, fill: true, pointRadius: 2 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `RM ${ctx.raw.toFixed(2)}` } } } } });
+        // Products table
+        const prodContainer = document.getElementById('productsList');
+        if (!products.products?.length) prodContainer.innerHTML = '<div class="loader">No product sales</div>';
+        else {
+            const top = [...products.products].sort((a,b)=> (b.total||0)-(a.total||0)).slice(0,7);
+            let html = `<table class="mini-table"><thead><tr><th>Product</th><th>Qty</th><th>Total</th></tr></thead><tbody>`;
+            top.forEach(p => { html += `<tr><td><strong>${escapeHtml(p.name||'')}</strong><br><span class="badge">${p.category||''}</span></td><td>${formatNumber(p.quantity)}</td><td>${formatMYR(p.total)}</td></tr>`; });
+            html += `</tbody></table>`;
+            prodContainer.innerHTML = html;
+        }
+        // Employee chart
+        const empCtx = document.getElementById('employeeChart').getContext('2d');
+        const fallback = document.getElementById('employeeFallback');
+        if (employeeChart) employeeChart.destroy();
+        if (!employees.labels?.length) { fallback.innerText = 'No staff data'; employeeChart = new Chart(empCtx, { type: 'bar', data: { labels: [], datasets: [] } }); }
+        else {
+            fallback.innerText = '';
+            employeeChart = new Chart(empCtx, { type: 'bar', data: { labels: employees.labels, datasets: [{ label: 'Sales (RM)', data: employees.data.map(v=>parseFloat(v)), backgroundColor: '#5f8bb3', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `RM ${ctx.raw.toFixed(2)}` } } } } });
+        }
+    }
+    
+    function showSkeleton(show) {
+        if (!show) return;
+        document.getElementById('totalSales').innerHTML = '<div class="skeleton" style="height:40px; width:80%"></div>';
+        document.getElementById('txnCount').innerHTML = '<div class="skeleton" style="height:40px; width:60%"></div>';
+        document.getElementById('itemsSold').innerHTML = '<div class="skeleton" style="height:40px; width:70%"></div>';
+        document.getElementById('avgTicket').innerHTML = '<div class="skeleton" style="height:40px; width:65%"></div>';
+        document.getElementById('cashAmount').innerHTML = '—';
+        document.getElementById('cardAmount').innerHTML = '—';
+        document.getElementById('alipayAmount').innerHTML = '—';
+        document.getElementById('otherAmount').innerHTML = '—';
+        document.getElementById('refundAmount').innerHTML = '—';
+        document.getElementById('productsList').innerHTML = '<div class="skeleton" style="height:200px;"></div>';
+        if (trendChart) trendChart.destroy();
+        if (employeeChart) employeeChart.destroy();
+    }
+    
+    let refreshInProgress = false;
+    async function refreshDashboard() {
+        if (refreshInProgress) return;
+        if (!currentFrom || !currentTo) return;
+        refreshInProgress = true;
+        refreshBtn.innerText = '⌛';
+        showSkeleton(true);
+        try {
+            const data = await fetchAllData(currentStore, currentFrom, currentTo);
+            updateUI(data);
+            errorDiv.style.display = 'none';
+        } catch (err) {
+            console.error(err);
+            showError(err.message);
+        } finally {
+            refreshInProgress = false;
+            refreshBtn.innerText = '⟳';
+        }
+    }
+    
+    // Debounced refresh for rapid arrow clicks
+    function debouncedRefresh() {
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => refreshDashboard(), 50);
+    }
+    
+    function showError(msg) {
+        errorDiv.innerText = msg;
+        errorDiv.style.display = 'block';
+        setTimeout(() => errorDiv.style.display = 'none', 3000);
+    }
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+    
+    // Modal handlers
+    const storeModal = document.getElementById('storeModal');
+    const dateModal = document.getElementById('dateModal');
+    function openStoreModal() { storeModal.classList.add('active'); }
+    function closeStoreModal() { storeModal.classList.remove('active'); }
+    function openDateModal() { document.getElementById('customDateRange').style.display = 'none'; dateModal.classList.add('active'); }
+    function closeDateModal() { dateModal.classList.remove('active'); }
+    function selectStore(store) { currentStore = store; closeStoreModal(); refreshDashboard(); }
+    function selectDatePreset(preset) {
+        if (preset === 'custom') { document.getElementById('customDateRange').style.display = 'block'; return; }
+        applyPreset(preset); closeDateModal();
+    }
+    function applyCustomRange() {
+        const from = document.getElementById('customFromDate').value;
+        const to = document.getElementById('customToDate').value;
+        if (!from || !to) { showError("Select both dates"); return; }
+        if (from > to) { showError("Invalid range"); return; }
+        applyPreset('custom', from, to);
+        closeDateModal();
+    }
+    
+    // Event binding (with passive true for touch)
+    refreshBtn.addEventListener('click', refreshDashboard);
+    storeIconBtn.addEventListener('click', openStoreModal);
+    dateTriggerBtn.addEventListener('click', openDateModal);
+    leftArrow.addEventListener('click', () => { shiftDateRange('left'); debouncedRefresh(); });
+    rightArrow.addEventListener('click', () => { shiftDateRange('right'); debouncedRefresh(); });
+    document.getElementById('closeStoreModal').addEventListener('click', closeStoreModal);
+    document.getElementById('closeDateModal').addEventListener('click', closeDateModal);
+    document.querySelectorAll('#storeModal .store-option').forEach(opt => opt.addEventListener('click', () => selectStore(opt.dataset.store)));
+    document.querySelectorAll('#dateModal .preset-option').forEach(opt => {
+        const preset = opt.dataset.preset;
+        if (preset !== 'custom') opt.addEventListener('click', () => selectDatePreset(preset));
+        else opt.addEventListener('click', () => selectDatePreset('custom'));
+    });
+    document.getElementById('applyCustomBtn').addEventListener('click', applyCustomRange);
+    storeModal.addEventListener('click', (e) => { if(e.target === storeModal) closeStoreModal(); });
+    dateModal.addEventListener('click', (e) => { if(e.target === dateModal) closeDateModal(); });
+    
+    // Initialize: today's date (single day)
+    const today = new Date(); today.setHours(0,0,0,0);
+    currentPresetType = 'day';
+    currentDayDate = new Date(today);
+    currentFrom = formatYMD(currentDayDate);
+    currentTo = formatYMD(currentDayDate);
+    dateRangeLabelSpan.innerText = formatYMD(currentDayDate);
+    refreshDashboard();
+</script>
+</body>
+</html>
