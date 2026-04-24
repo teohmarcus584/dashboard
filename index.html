@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Sales Dashboard · Fast & Debug</title>
+    <title>Sales Dashboard · Instant</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
@@ -77,11 +77,10 @@
         .mini-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
         .mini-table th, .mini-table td { padding: 12px 6px; text-align: left; border-bottom: 1px solid #ecf0f5; }
         .badge { background: #eef2ff; border-radius: 30px; padding: 2px 8px; font-size: 0.7rem; }
-        .error-toast { background: #fee2e2; border-radius: 24px; padding: 12px 16px; margin-bottom: 16px; color: #b91c1c; font-size: 0.8rem; text-align: left; word-break: break-word; border-left: 4px solid #b91c1c; }
-        .skeleton { background: linear-gradient(90deg, #f0f2f5 25%, #e9ecef 50%, #f0f2f5 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 12px; height: 40px; width: 100%; margin-top: 8px; }
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .error-toast { background: #fee2e2; border-radius: 24px; padding: 12px 16px; margin-bottom: 16px; color: #b91c1c; font-size: 0.8rem; text-align: left; border-left: 4px solid #b91c1c; }
         canvas { max-height: 220px; width: 100%; }
-        .debug-panel { background: #1e1e2f; color: #f0f0f0; padding: 12px; border-radius: 20px; font-family: monospace; font-size: 11px; margin-bottom: 16px; max-height: 200px; overflow: auto; white-space: pre-wrap; }
+        .refresh-spin { animation: spin 0.6s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @media (max-width: 480px) { .kpi-value { font-size: 1.5rem; } .date-label { font-size: 0.7rem; } }
     </style>
 </head>
@@ -97,7 +96,6 @@
 </div>
 <div class="dashboard-container">
     <div id="errorMsg" style="display: none;" class="error-toast"></div>
-    <div id="debugPanel" class="debug-panel">🟡 Initializing dashboard...</div>
     
     <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-label">TOTAL SALES (RM)</div><div class="kpi-value" id="totalSales">—</div></div>
@@ -140,14 +138,12 @@
     // ========== CONFIG ==========
     const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzfrWUxI6MiAc05CRNV5IRlTXg7pJiOqlMBCGGQISBcl1FFtkmfUwMmflEhm6tyCAr6qg/exec";
     
-    // Debug logger
-    const debugPanel = document.getElementById('debugPanel');
-    function debugLog(msg) { 
-        const time = new Date().toLocaleTimeString();
-        debugPanel.innerHTML = `[${time}] ${msg}\n` + debugPanel.innerHTML;
-        if (debugPanel.innerHTML.length > 2000) debugPanel.innerHTML = debugPanel.innerHTML.slice(0, 1800);
-        console.log(msg);
-    }
+    // Cache: store results for 30 seconds
+    const cache = new Map();
+    const CACHE_TTL = 30000;
+    
+    // Abort controller for pending requests
+    let currentAbortController = null;
     
     // DOM elements
     const refreshBtn = document.getElementById('headerRefreshBtn');
@@ -163,10 +159,12 @@
     let currentFrom = "", currentTo = "";
     let currentPresetType = "day";
     let currentDayDate = null;
+    let lastLoadedFrom = "", lastLoadedTo = "", lastLoadedStore = "";
+    let hasData = false;
     let refreshInProgress = false;
     let trendChart = null, employeeChart = null;
     
-    // Helper: format YYYY-MM-DD
+    // Helper functions
     function formatYMD(date) {
         let y = date.getFullYear();
         let m = String(date.getMonth() + 1).padStart(2, '0');
@@ -180,8 +178,23 @@
         d.setDate(d.getDate() + diff);
         return d;
     }
+    function formatMYR(v) { return `RM ${(v || 0).toFixed(2)}`; }
+    function formatNumber(v) { return (parseInt(v) || 0).toLocaleString(); }
     
-    // Apply preset (update state & refresh)
+    // Cache helpers
+    function getCacheKey(action, store, from, to) { return `${action}|${store}|${from}|${to}`; }
+    function getCached(action, store, from, to) {
+        const key = getCacheKey(action, store, from, to);
+        const entry = cache.get(key);
+        if (entry && (Date.now() - entry.timestamp) < CACHE_TTL) return entry.data;
+        return null;
+    }
+    function setCache(action, store, from, to, data) {
+        const key = getCacheKey(action, store, from, to);
+        cache.set(key, { data, timestamp: Date.now() });
+    }
+    
+    // Apply preset (optimistic - updates UI instantly)
     function applyPreset(preset, customFrom = null, customTo = null) {
         const today = new Date(); today.setHours(0,0,0,0);
         if (preset === 'custom' && customFrom && customTo) {
@@ -232,7 +245,7 @@
         }
     }
     
-    // Arrow shift
+    // Arrow shift (optimistic)
     function shiftDateRange(direction) {
         if (refreshInProgress) return;
         const delta = direction === 'left' ? -1 : 1;
@@ -285,63 +298,43 @@
         }
     }
     
-    // API fetch with timeout
-    async function fetchApi(action, store, from, to) {
+    // API fetch with cache and abort
+    async function fetchApi(action, store, from, to, signal) {
+        const cached = getCached(action, store, from, to);
+        if (cached) return cached;
+        
         const params = new URLSearchParams({ action, store, from, to });
         if (action === 'getSalesReport') params.append('employeeId', 'all'), params.append('unsettledOnly', 'false');
         if (action === 'getSalesChartData' || action === 'getProductSalesReport' || action === 'getEmployeeSalesData') params.append('employeeId', 'all');
         const url = `${BACKEND_URL}?${params.toString()}`;
-        debugLog(`📡 Fetching: ${action} for ${store} (${from} → ${to})`);
         
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        
-        try {
-            const response = await fetch(url, { method: 'GET', signal: controller.signal, mode: 'cors', cache: 'no-store' });
-            clearTimeout(timeoutId);
-            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            const data = await response.json();
-            if (data && data.success === false) throw new Error(data.error || "API returned error");
-            debugLog(`✅ ${action} success`);
-            return data;
-        } catch (err) {
-            clearTimeout(timeoutId);
-            debugLog(`❌ ${action} failed: ${err.message}`);
-            throw err;
-        }
+        const response = await fetch(url, { method: 'GET', signal, cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (data && data.success === false) throw new Error(data.error || "API error");
+        setCache(action, store, from, to, data);
+        return data;
     }
     
-    async function fetchAllData(store, from, to) {
-        const results = await Promise.allSettled([
-            fetchApi('getSalesReport', store, from, to),
-            fetchApi('getSalesChartData', store, from, to),
-            fetchApi('getProductSalesReport', store, from, to),
-            fetchApi('getEmployeeSalesData', store, from, to)
+    async function fetchAllData(store, from, to, signal) {
+        const [sales, chart, products, employees] = await Promise.all([
+            fetchApi('getSalesReport', store, from, to, signal),
+            fetchApi('getSalesChartData', store, from, to, signal),
+            fetchApi('getProductSalesReport', store, from, to, signal),
+            fetchApi('getEmployeeSalesData', store, from, to, signal)
         ]);
-        const [salesResult, chartResult, productsResult, empResult] = results;
-        if (salesResult.status === 'rejected') throw new Error(`Sales report failed: ${salesResult.reason.message}`);
-        return {
-            sales: salesResult.value,
-            chart: chartResult.status === 'fulfilled' ? chartResult.value : { success: true, salesByDay: { labels: [], data: [] } },
-            products: productsResult.status === 'fulfilled' ? productsResult.value : { products: [] },
-            employees: empResult.status === 'fulfilled' ? empResult.value : { labels: [], data: [] }
-        };
+        return { sales, chart, products, employees };
     }
     
-    // UI update functions
-    function formatMYR(v) { return `RM ${(v || 0).toFixed(2)}`; }
-    function formatNumber(v) { return (parseInt(v) || 0).toLocaleString(); }
-    
+    // UI update (keeps old data if new fetch fails)
     function updateUI(data) {
         const { sales, chart, products, employees } = data;
-        // KPI values
         document.getElementById('totalSales').innerText = formatMYR(sales.totalSales);
         document.getElementById('txnCount').innerText = formatNumber(sales.transactionCount);
         document.getElementById('itemsSold').innerText = formatNumber(sales.totalItems);
         const avg = sales.transactionCount ? sales.totalSales / sales.transactionCount : 0;
         document.getElementById('avgTicket').innerText = formatMYR(avg);
         
-        // Payment breakdown (update existing elements)
         document.getElementById('cashAmount').innerText = formatMYR(sales.cashTotal);
         document.getElementById('cardAmount').innerText = formatMYR(sales.cardTotal);
         document.getElementById('alipayAmount').innerText = formatMYR(sales.alipayTotal);
@@ -360,10 +353,10 @@
             options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `RM ${ctx.raw.toFixed(2)}` } } } }
         });
         
-        // Top products
+        // Products
         const prodContainer = document.getElementById('productsList');
         if (!products.products || products.products.length === 0) {
-            prodContainer.innerHTML = '<div class="loader">No product sales in this period</div>';
+            prodContainer.innerHTML = '<div class="loader">No product sales</div>';
         } else {
             const top = [...products.products].sort((a,b)=> (b.total||0)-(a.total||0)).slice(0,7);
             let html = `<table class="mini-table"><thead><tr><th>Product</th><th>Qty</th><th>Total</th></tr></thead><tbody>`;
@@ -379,7 +372,7 @@
         const fallback = document.getElementById('employeeFallback');
         if (employeeChart) employeeChart.destroy();
         if (!employees.labels || employees.labels.length === 0) {
-            fallback.innerText = 'No staff sales data';
+            fallback.innerText = 'No staff data';
             employeeChart = new Chart(empCtx, { type: 'bar', data: { labels: [], datasets: [] } });
         } else {
             fallback.innerText = '';
@@ -388,51 +381,59 @@
                 options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `RM ${ctx.raw.toFixed(2)}` } } } }
             });
         }
+        hasData = true;
     }
     
-    function showSkeleton() {
-        document.getElementById('totalSales').innerHTML = '<div class="skeleton"></div>';
-        document.getElementById('txnCount').innerHTML = '<div class="skeleton"></div>';
-        document.getElementById('itemsSold').innerHTML = '<div class="skeleton"></div>';
-        document.getElementById('avgTicket').innerHTML = '<div class="skeleton"></div>';
-        document.getElementById('cashAmount').innerHTML = '—';
-        document.getElementById('cardAmount').innerHTML = '—';
-        document.getElementById('alipayAmount').innerHTML = '—';
-        document.getElementById('otherAmount').innerHTML = '—';
-        document.getElementById('refundAmount').innerHTML = '—';
-        document.getElementById('productsList').innerHTML = '<div class="skeleton" style="height:150px;"></div>';
-        document.getElementById('employeeFallback').innerHTML = '';
-        if (trendChart) trendChart.destroy();
-        if (employeeChart) employeeChart.destroy();
-    }
-    
+    // Refresh with abort and cache
     async function refreshDashboard() {
-        if (refreshInProgress) { debugLog("⏳ Refresh already in progress, skipping"); return; }
-        if (!currentFrom || !currentTo) { debugLog("⚠️ No date range set"); return; }
+        if (refreshInProgress) {
+            // Cancel previous request
+            if (currentAbortController) {
+                currentAbortController.abort();
+                refreshBtn.classList.remove('refresh-spin');
+                refreshInProgress = false;
+            }
+        }
+        if (!currentFrom || !currentTo) return;
+        
+        // If same as last loaded and we have data, skip fetch (instant)
+        if (hasData && currentFrom === lastLoadedFrom && currentTo === lastLoadedTo && currentStore === lastLoadedStore) {
+            return;
+        }
+        
         refreshInProgress = true;
-        refreshBtn.innerText = '⌛';
-        showSkeleton();
+        refreshBtn.classList.add('refresh-spin');
         errorDiv.style.display = 'none';
-        debugLog(`🔄 Refreshing: store=${currentStore}, from=${currentFrom}, to=${currentTo}`);
+        
+        // Create new abort controller
+        if (currentAbortController) currentAbortController.abort();
+        currentAbortController = new AbortController();
+        const signal = currentAbortController.signal;
         
         try {
-            const data = await fetchAllData(currentStore, currentFrom, currentTo);
+            const data = await fetchAllData(currentStore, currentFrom, currentTo, signal);
             updateUI(data);
-            debugLog("✅ Dashboard updated successfully");
+            lastLoadedFrom = currentFrom;
+            lastLoadedTo = currentTo;
+            lastLoadedStore = currentStore;
         } catch (err) {
-            debugLog(`❌ Critical error: ${err.message}`);
+            if (err.name === 'AbortError') {
+                console.log('Request cancelled');
+                return;
+            }
             showError(err.message);
         } finally {
             refreshInProgress = false;
-            refreshBtn.innerText = '⟳';
+            refreshBtn.classList.remove('refresh-spin');
+            if (currentAbortController?.signal === signal) currentAbortController = null;
         }
     }
     
     function showError(msg) {
-        errorDiv.innerText = `⚠️ ${msg}\n\n💡 Tip: If you see CORS errors, you must serve this HTML from the same Apps Script project as a Web App.`;
+        errorDiv.innerText = msg;
         errorDiv.style.display = 'block';
+        setTimeout(() => errorDiv.style.display = 'none', 4000);
     }
-    
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
     
     // Modal handlers
@@ -460,8 +461,8 @@
     refreshBtn.addEventListener('click', refreshDashboard);
     storeIconBtn.addEventListener('click', openStoreModal);
     dateTriggerBtn.addEventListener('click', openDateModal);
-    leftArrow.addEventListener('click', () => { shiftDateRange('left'); setTimeout(() => refreshDashboard(), 50); });
-    rightArrow.addEventListener('click', () => { shiftDateRange('right'); setTimeout(() => refreshDashboard(), 50); });
+    leftArrow.addEventListener('click', () => { shiftDateRange('left'); });
+    rightArrow.addEventListener('click', () => { shiftDateRange('right'); });
     document.getElementById('closeStoreModal').addEventListener('click', closeStoreModal);
     document.getElementById('closeDateModal').addEventListener('click', closeDateModal);
     document.querySelectorAll('#storeModal .store-option').forEach(opt => opt.addEventListener('click', () => selectStore(opt.dataset.store)));
@@ -481,7 +482,6 @@
     currentFrom = formatYMD(currentDayDate);
     currentTo = formatYMD(currentDayDate);
     dateRangeLabelSpan.innerText = formatYMD(currentDayDate);
-    debugLog("🚀 Dashboard initialized. Starting first load...");
     refreshDashboard();
 </script>
 </body>
