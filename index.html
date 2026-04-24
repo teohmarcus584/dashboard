@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Sales Dashboard · Instant</title>
+    <title>Sales Dashboard · Instant + Preload</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
@@ -137,12 +137,11 @@
 <script>
     // ========== CONFIG ==========
     const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzfrWUxI6MiAc05CRNV5IRlTXg7pJiOqlMBCGGQISBcl1FFtkmfUwMmflEhm6tyCAr6qg/exec";
+    const CACHE_TTL = 60000; // 60 seconds cache for preloaded data too
+    const PRELOAD_DELAY = 800; // ms after load to start background preloading
     
-    // Cache: store results for 30 seconds
+    // Cache
     const cache = new Map();
-    const CACHE_TTL = 30000;
-    
-    // Abort controller for pending requests
     let currentAbortController = null;
     
     // DOM elements
@@ -162,9 +161,11 @@
     let lastLoadedFrom = "", lastLoadedTo = "", lastLoadedStore = "";
     let hasData = false;
     let refreshInProgress = false;
+    let preloadTimer = null;
+    let preloadInProgress = false;
     let trendChart = null, employeeChart = null;
     
-    // Helper functions
+    // Helper date functions
     function formatYMD(date) {
         let y = date.getFullYear();
         let m = String(date.getMonth() + 1).padStart(2, '0');
@@ -194,7 +195,119 @@
         cache.set(key, { data, timestamp: Date.now() });
     }
     
-    // Apply preset (optimistic - updates UI instantly)
+    // Generate shifted range (for preloading) based on current preset and direction
+    function getAdjacentRange(direction) {
+        const delta = direction === 'next' ? 1 : -1;
+        if (currentPresetType === 'day') {
+            let date = currentDayDate ? new Date(currentDayDate) : new Date();
+            let newDate = new Date(date);
+            newDate.setDate(date.getDate() + delta);
+            return { from: formatYMD(newDate), to: formatYMD(newDate), type: 'day' };
+        }
+        if (currentPresetType === 'week') {
+            let start = new Date(currentFrom);
+            if (isNaN(start.getTime())) start = getWeekStart(new Date());
+            let newStart = new Date(start);
+            newStart.setDate(start.getDate() + delta * 7);
+            let newEnd = new Date(newStart);
+            newEnd.setDate(newStart.getDate() + 6);
+            return { from: formatYMD(newStart), to: formatYMD(newEnd), type: 'week' };
+        }
+        if (currentPresetType === 'month') {
+            let start = new Date(currentFrom);
+            if (isNaN(start.getTime())) start = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+            let newStart = new Date(start);
+            newStart.setMonth(start.getMonth() + delta);
+            let newEnd = new Date(newStart.getFullYear(), newStart.getMonth() + 1, 0);
+            return { from: formatYMD(newStart), to: formatYMD(newEnd), type: 'month' };
+        }
+        if (currentPresetType === 'year') {
+            let start = new Date(currentFrom);
+            if (isNaN(start.getTime())) start = new Date(new Date().getFullYear(), 0, 1);
+            let newYear = start.getFullYear() + delta;
+            let newStart = new Date(newYear, 0, 1);
+            let newEnd = new Date(newYear, 11, 31);
+            return { from: formatYMD(newStart), to: formatYMD(newEnd), type: 'year' };
+        }
+        return null;
+    }
+    
+    // Silent preload for a specific range (no UI update)
+    async function silentPreload(store, from, to) {
+        if (!store || !from || !to) return;
+        // Check if already cached or currently loading
+        const salesCached = getCached('getSalesReport', store, from, to);
+        if (salesCached) return; // already cached
+        
+        preloadInProgress = true;
+        try {
+            // Use a separate abort controller for preload (can be cancelled later)
+            const controller = new AbortController();
+            const signal = controller.signal;
+            // Store the controller temporarily if needed, but we don't cancel preloads aggressively
+            await Promise.all([
+                fetchApiSilent('getSalesReport', store, from, to, signal),
+                fetchApiSilent('getSalesChartData', store, from, to, signal),
+                fetchApiSilent('getProductSalesReport', store, from, to, signal),
+                fetchApiSilent('getEmployeeSalesData', store, from, to, signal)
+            ]);
+        } catch (err) {
+            if (err.name !== 'AbortError') console.warn('Preload failed:', err);
+        } finally {
+            preloadInProgress = false;
+        }
+    }
+    
+    async function fetchApiSilent(action, store, from, to, signal) {
+        const cached = getCached(action, store, from, to);
+        if (cached) return cached;
+        const params = new URLSearchParams({ action, store, from, to });
+        if (action === 'getSalesReport') params.append('employeeId', 'all'), params.append('unsettledOnly', 'false');
+        if (action === 'getSalesChartData' || action === 'getProductSalesReport' || action === 'getEmployeeSalesData') params.append('employeeId', 'all');
+        const url = `${BACKEND_URL}?${params.toString()}`;
+        const response = await fetch(url, { method: 'GET', signal, cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (data && data.success === false) throw new Error(data.error || "API error");
+        setCache(action, store, from, to, data);
+        return data;
+    }
+    
+    // After successful load, preload adjacent ranges
+    function triggerAdjacentPreload() {
+        if (preloadTimer) clearTimeout(preloadTimer);
+        if (currentPresetType === 'custom') return; // don't preload custom ranges
+        preloadTimer = setTimeout(() => {
+            const nextRange = getAdjacentRange('next');
+            const prevRange = getAdjacentRange('prev');
+            if (nextRange) {
+                silentPreload(currentStore, nextRange.from, nextRange.to);
+            }
+            if (prevRange) {
+                silentPreload(currentStore, prevRange.from, prevRange.to);
+            }
+        }, PRELOAD_DELAY);
+    }
+    
+    // Also preload common presets on initial load (today, this week, this month) - but only once
+    let initialPreloadDone = false;
+    function preloadCommonPresets() {
+        if (initialPreloadDone) return;
+        initialPreloadDone = true;
+        const today = new Date(); today.setHours(0,0,0,0);
+        const weekStart = getWeekStart(today);
+        const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        setTimeout(() => {
+            silentPreload(currentStore, formatYMD(today), formatYMD(today)); // today
+            silentPreload(currentStore, formatYMD(weekStart), formatYMD(weekEnd)); // this week
+            silentPreload(currentStore, formatYMD(monthStart), formatYMD(monthEnd)); // this month
+        }, 1000);
+    }
+    
+    // Apply preset (optimistic)
     function applyPreset(preset, customFrom = null, customTo = null) {
         const today = new Date(); today.setHours(0,0,0,0);
         if (preset === 'custom' && customFrom && customTo) {
@@ -245,7 +358,7 @@
         }
     }
     
-    // Arrow shift (optimistic)
+    // Arrow shift
     function shiftDateRange(direction) {
         if (refreshInProgress) return;
         const delta = direction === 'left' ? -1 : 1;
@@ -298,16 +411,14 @@
         }
     }
     
-    // API fetch with cache and abort
+    // Main fetch with abort
     async function fetchApi(action, store, from, to, signal) {
         const cached = getCached(action, store, from, to);
         if (cached) return cached;
-        
         const params = new URLSearchParams({ action, store, from, to });
         if (action === 'getSalesReport') params.append('employeeId', 'all'), params.append('unsettledOnly', 'false');
         if (action === 'getSalesChartData' || action === 'getProductSalesReport' || action === 'getEmployeeSalesData') params.append('employeeId', 'all');
         const url = `${BACKEND_URL}?${params.toString()}`;
-        
         const response = await fetch(url, { method: 'GET', signal, cache: 'no-store' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
@@ -326,7 +437,6 @@
         return { sales, chart, products, employees };
     }
     
-    // UI update (keeps old data if new fetch fails)
     function updateUI(data) {
         const { sales, chart, products, employees } = data;
         document.getElementById('totalSales').innerText = formatMYR(sales.totalSales);
@@ -342,7 +452,6 @@
         const refundPos = (sales.refundTotal || 0) * -1;
         document.getElementById('refundAmount').innerText = formatMYR(refundPos > 0 ? refundPos : 0);
         
-        // Trend chart
         const ctx = document.getElementById('trendChart').getContext('2d');
         if (trendChart) trendChart.destroy();
         let labels = [], values = [];
@@ -353,7 +462,6 @@
             options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `RM ${ctx.raw.toFixed(2)}` } } } }
         });
         
-        // Products
         const prodContainer = document.getElementById('productsList');
         if (!products.products || products.products.length === 0) {
             prodContainer.innerHTML = '<div class="loader">No product sales</div>';
@@ -367,7 +475,6 @@
             prodContainer.innerHTML = html;
         }
         
-        // Employee chart
         const empCtx = document.getElementById('employeeChart').getContext('2d');
         const fallback = document.getElementById('employeeFallback');
         if (employeeChart) employeeChart.destroy();
@@ -384,20 +491,15 @@
         hasData = true;
     }
     
-    // Refresh with abort and cache
     async function refreshDashboard() {
-        if (refreshInProgress) {
-            // Cancel previous request
-            if (currentAbortController) {
-                currentAbortController.abort();
-                refreshBtn.classList.remove('refresh-spin');
-                refreshInProgress = false;
-            }
+        if (refreshInProgress && currentAbortController) {
+            currentAbortController.abort();
+            refreshBtn.classList.remove('refresh-spin');
+            refreshInProgress = false;
         }
         if (!currentFrom || !currentTo) return;
-        
-        // If same as last loaded and we have data, skip fetch (instant)
         if (hasData && currentFrom === lastLoadedFrom && currentTo === lastLoadedTo && currentStore === lastLoadedStore) {
+            if (!initialPreloadDone) preloadCommonPresets();
             return;
         }
         
@@ -405,7 +507,6 @@
         refreshBtn.classList.add('refresh-spin');
         errorDiv.style.display = 'none';
         
-        // Create new abort controller
         if (currentAbortController) currentAbortController.abort();
         currentAbortController = new AbortController();
         const signal = currentAbortController.signal;
@@ -416,11 +517,11 @@
             lastLoadedFrom = currentFrom;
             lastLoadedTo = currentTo;
             lastLoadedStore = currentStore;
+            // Trigger background preloading of adjacent ranges
+            triggerAdjacentPreload();
+            if (!initialPreloadDone) preloadCommonPresets();
         } catch (err) {
-            if (err.name === 'AbortError') {
-                console.log('Request cancelled');
-                return;
-            }
+            if (err.name === 'AbortError') return;
             showError(err.message);
         } finally {
             refreshInProgress = false;
@@ -457,12 +558,11 @@
         closeDateModal();
     }
     
-    // Event listeners
     refreshBtn.addEventListener('click', refreshDashboard);
     storeIconBtn.addEventListener('click', openStoreModal);
     dateTriggerBtn.addEventListener('click', openDateModal);
-    leftArrow.addEventListener('click', () => { shiftDateRange('left'); });
-    rightArrow.addEventListener('click', () => { shiftDateRange('right'); });
+    leftArrow.addEventListener('click', () => shiftDateRange('left'));
+    rightArrow.addEventListener('click', () => shiftDateRange('right'));
     document.getElementById('closeStoreModal').addEventListener('click', closeStoreModal);
     document.getElementById('closeDateModal').addEventListener('click', closeDateModal);
     document.querySelectorAll('#storeModal .store-option').forEach(opt => opt.addEventListener('click', () => selectStore(opt.dataset.store)));
