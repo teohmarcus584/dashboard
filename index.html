@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Sales Dashboard · Accurate Discounts</title>
+    <title>Sales Dashboard · True Discounted Revenue</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
@@ -11,110 +11,40 @@
         body { font-family: 'Inter', sans-serif; background: #f4f6fa; padding: 0 0 40px; color: #1a2634; }
         .dashboard-container { width: 100%; padding: 0 20px; }
         @media (min-width: 1400px) { .dashboard-container { padding: 0 40px; } }
-        
         .app-header {
             background: white; padding: 12px 20px; border-bottom: 1px solid #eef2f8;
             display: flex; align-items: center; justify-content: space-between;
             position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);
             background: rgba(255,255,255,0.96); margin-bottom: 24px;
         }
-        .refresh-icon {
-            background: #f0f3f9; border: none; width: 48px; height: 48px;
-            border-radius: 30px; font-size: 1.6rem; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
-        }
-        .store-selector {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #f0f3f9;
-            padding: 6px 16px 6px 12px;
-            border-radius: 60px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .store-selector:active { background: #e0e6f0; }
-        .store-icon-small { font-size: 1.4rem; }
+        .refresh-icon { background: #f0f3f9; border: none; width: 48px; height: 48px; border-radius: 30px; font-size: 1.6rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .store-selector { display: flex; align-items: center; gap: 8px; background: #f0f3f9; padding: 6px 16px 6px 12px; border-radius: 60px; cursor: pointer; }
         .store-name { font-weight: 600; font-size: 0.9rem; color: #1e4668; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
-        .date-control {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #f0f3f9;
-            border-radius: 60px;
-            padding: 4px 8px;
-        }
-        .arrow-btn {
-            background: transparent; border: none; font-size: 1.4rem;
-            cursor: pointer; width: 44px; height: 44px; border-radius: 40px;
-            display: flex; align-items: center; justify-content: center;
-            color: #2c3e66;
-        }
-        .arrow-btn:active { background: #dce3ec; }
-        .date-trigger-btn {
-            background: white; border: none; padding: 10px 24px; border-radius: 50px;
-            font-weight: 700; font-size: 1rem; cursor: pointer;
-            display: flex; align-items: center; gap: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-        }
-        .date-trigger-btn:active { transform: scale(0.97); background: #f8fafd; }
-        .date-range-label { white-space: nowrap; }
-        
-        .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 18px;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        .toggle-group {
-            display: flex;
-            background: #f0f3f9;
-            border-radius: 50px;
-            padding: 4px;
-        }
-        .toggle-btn {
-            padding: 8px 20px;
-            border: none;
-            border-radius: 40px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            cursor: pointer;
-            background: transparent;
-            transition: all 0.1s;
-        }
-        .toggle-btn.active {
-            background: #1e4668;
-            color: white;
-        }
-        
+        .date-control { display: flex; align-items: center; gap: 8px; background: #f0f3f9; border-radius: 60px; padding: 4px 8px; }
+        .arrow-btn { background: transparent; border: none; font-size: 1.4rem; cursor: pointer; width: 44px; height: 44px; border-radius: 40px; display: flex; align-items: center; justify-content: center; color: #2c3e66; }
+        .date-trigger-btn { background: white; border: none; padding: 10px 24px; border-radius: 50px; font-weight: 700; font-size: 1rem; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .chart-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
+        .toggle-group { display: flex; background: #f0f3f9; border-radius: 50px; padding: 4px; }
+        .toggle-btn { padding: 8px 20px; border: none; border-radius: 40px; font-weight: 600; font-size: 0.8rem; cursor: pointer; background: transparent; }
+        .toggle-btn.active { background: #1e4668; color: white; }
         .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 28px; }
         .kpi-card { background: white; border-radius: 32px; padding: 20px 16px; border: 1px solid #eef2f8; }
         .kpi-label { font-size: 0.9rem; font-weight: 700; color: #4a627a; }
         .kpi-value { font-size: 2.4rem; font-weight: 800; color: #1a2c42; margin-top: 12px; }
-        
         .payment-breakdown { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; }
         .payment-item { flex: 1; text-align: center; background: #f9fbfd; border-radius: 28px; padding: 14px 8px; }
         .payment-method { font-size: 0.85rem; font-weight: 700; color: #596f8f; }
         .payment-amount { font-weight: 800; font-size: 1.2rem; margin-top: 6px; }
-        
         .section-card { background: white; border-radius: 32px; padding: 20px 18px; margin-bottom: 28px; border: 1px solid #eef2f8; }
         .section-title { font-weight: 800; font-size: 1.2rem; margin-bottom: 18px; border-left: 5px solid #2b6e9e; padding-left: 14px; }
         .note { font-size: 0.7rem; color: #6c86a3; margin-top: 8px; text-align: right; font-style: italic; }
-        
         .mini-table { width: 100%; font-size: 0.9rem; border-collapse: collapse; }
         .mini-table th, .mini-table td { padding: 14px 8px; text-align: left; border-bottom: 1px solid #ecf0f5; }
-        .mini-table th { font-weight: 700; color: #4a627a; }
         .badge { background: #eef2ff; border-radius: 40px; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; display: inline-block; margin-top: 4px; }
-        
         .error-toast { background: #fee2e2; border-radius: 28px; padding: 14px 18px; margin-bottom: 20px; color: #b91c1c; font-size: 0.9rem; border-left: 5px solid #b91c1c; display: none; }
         canvas { max-height: 260px; width: 100%; margin-top: 8px; }
         .refresh-spin { animation: spin 0.6s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(3px); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; visibility: hidden; opacity: 0; transition: 0.2s; }
         .modal-overlay.active { visibility: visible; opacity: 1; }
         .modal-bottom { background: white; width: 100%; max-width: 520px; border-radius: 32px 32px 0 0; padding: 24px 20px 32px; transform: translateY(100%); transition: transform 0.25s ease-out; }
@@ -126,15 +56,7 @@
         .date-range-custom input { flex: 1; padding: 12px; border-radius: 30px; border: 1px solid #dce3ec; font-size: 0.9rem; }
         .apply-custom { background: #1e4668; color: white; border: none; border-radius: 40px; padding: 12px 18px; font-weight: 600; cursor: pointer; }
         .divider { height: 1px; background: #eef2f8; margin: 20px 0; }
-        
-        @media (max-width: 640px) {
-            .dashboard-container { padding: 0 16px; }
-            .kpi-value { font-size: 1.8rem; }
-            .date-trigger-btn { padding: 8px 16px; font-size: 0.85rem; }
-            .arrow-btn { width: 38px; height: 38px; font-size: 1.2rem; }
-            .store-name { max-width: 110px; font-size: 0.8rem; }
-            .note { font-size: 0.6rem; }
-        }
+        @media (max-width: 640px) { .kpi-value { font-size: 1.8rem; } .date-trigger-btn { padding: 8px 16px; font-size: 0.85rem; } .store-name { max-width: 110px; } }
     </style>
 </head>
 <body>
@@ -145,83 +67,33 @@
         <button class="date-trigger-btn" id="dateTriggerBtn">📅 <span class="date-range-label" id="dateRangeLabel">Today</span></button>
         <button class="arrow-btn" id="rightArrowBtn">→</button>
     </div>
-    <div class="store-selector" id="storeSelectorBtn">
-        <span class="store-icon-small">🏬</span>
-        <span class="store-name" id="storeNameLabel">Queensbay</span>
-    </div>
+    <div class="store-selector" id="storeSelectorBtn"><span class="store-icon-small">🏬</span><span class="store-name" id="storeNameLabel">Queensbay</span></div>
 </div>
 <div class="dashboard-container">
     <div id="errorMsg" class="error-toast"></div>
-    
     <div class="kpi-grid">
         <div class="kpi-card"><div class="kpi-label">TOTAL SALES (RM)</div><div class="kpi-value" id="totalSales">—</div></div>
         <div class="kpi-card"><div class="kpi-label">TRANSACTIONS</div><div class="kpi-value" id="txnCount">—</div></div>
         <div class="kpi-card"><div class="kpi-label">ITEMS SOLD</div><div class="kpi-value" id="itemsSold">—</div></div>
         <div class="kpi-card"><div class="kpi-label">AVG. TICKET</div><div class="kpi-value" id="avgTicket">—</div></div>
     </div>
-    
-    <div class="section-card">
-        <div class="section-title">👥 Staff Sales Summary</div>
-        <div id="staffSalesList">Loading...</div>
-    </div>
-    
-    <div class="section-card">
-        <div class="section-title">💵 Payment Breakdown</div>
-        <div class="payment-breakdown">
-            <div class="payment-item"><div class="payment-method">Cash</div><div class="payment-amount" id="cashAmount">—</div></div>
-            <div class="payment-item"><div class="payment-method">Card</div><div class="payment-amount" id="cardAmount">—</div></div>
-            <div class="payment-item"><div class="payment-method">Alipay</div><div class="payment-amount" id="alipayAmount">—</div></div>
-            <div class="payment-item"><div class="payment-method">Other</div><div class="payment-amount" id="otherAmount">—</div></div>
-            <div class="payment-item"><div class="payment-method">Refunds</div><div class="payment-amount" id="refundAmount">—</div></div>
-        </div>
-    </div>
-    
-    <div class="section-card">
-        <div class="chart-header">
-            <div class="section-title" style="margin-bottom:0; border-left: none; padding-left:0;">📈 Sales Trend</div>
-            <div class="toggle-group" id="chartToggleGroup">
-                <button class="toggle-btn active" data-chart-type="line">Line</button>
-                <button class="toggle-btn" data-chart-type="bar">Bar</button>
-            </div>
-        </div>
-        <canvas id="trendChart"></canvas>
-    </div>
-    
-    <div class="section-card">
-        <div class="section-title">🏆 Top Products</div>
-        <div id="productsList">Loading...</div>
-        <div class="note">* Amounts shown are after all discounts (including free-item promotions and staff discounts).</div>
-    </div>
-    
-    <div class="section-card">
-        <div class="section-title">📊 Sales by Category</div>
-        <div id="categorySalesList">Loading...</div>
-        <div class="note">* Category totals also reflect discounted revenue.</div>
-    </div>
+    <div class="section-card"><div class="section-title">👥 Staff Sales Summary</div><div id="staffSalesList">Loading...</div></div>
+    <div class="section-card"><div class="section-title">💵 Payment Breakdown</div><div class="payment-breakdown"><div class="payment-item"><div class="payment-method">Cash</div><div class="payment-amount" id="cashAmount">—</div></div><div class="payment-item"><div class="payment-method">Card</div><div class="payment-amount" id="cardAmount">—</div></div><div class="payment-item"><div class="payment-method">Alipay</div><div class="payment-amount" id="alipayAmount">—</div></div><div class="payment-item"><div class="payment-method">Other</div><div class="payment-amount" id="otherAmount">—</div></div><div class="payment-item"><div class="payment-method">Refunds</div><div class="payment-amount" id="refundAmount">—</div></div></div></div>
+    <div class="section-card"><div class="chart-header"><div class="section-title" style="margin-bottom:0; border-left: none;">📈 Sales Trend</div><div class="toggle-group" id="chartToggleGroup"><button class="toggle-btn active" data-chart-type="line">Line</button><button class="toggle-btn" data-chart-type="bar">Bar</button></div></div><canvas id="trendChart"></canvas></div>
+    <div class="section-card"><div class="section-title">🏆 Top Products</div><div id="productsList">Loading...</div><div class="note">* Amounts shown are after all discounts (promotions, buy-X-free-Y, staff discounts).</div></div>
+    <div class="section-card"><div class="section-title">📊 Sales by Category</div><div id="categorySalesList">Loading...</div><div class="note">* Category totals also reflect discounted revenue.</div></div>
 </div>
 
-<!-- Modals -->
-<div id="storeModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">🏬 Select Store</div>
-    <div class="store-option" data-store="all" data-name="All Stores">🏢 All Stores (Combined)</div>
-    <div class="store-option" data-store="queens" data-name="Queensbay Mall">Queensbay Mall</div>
-    <div class="store-option" data-store="sunshine" data-name="Sunshine Square">Sunshine Square</div>
-    <div class="store-option" data-store="gurney_paragon" data-name="Gurney Paragon">Gurney Paragon</div>
-    <button class="close-modal" id="closeStoreModal">Cancel</button></div></div>
-<div id="dateModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">📅 Select Range</div>
-    <div class="preset-option" data-preset="today">Today</div><div class="preset-option" data-preset="week">This Week</div>
-    <div class="preset-option" data-preset="month">This Month</div><div class="preset-option" data-preset="year">This Year</div>
-    <div class="divider"></div><div class="preset-option" data-preset="custom">📆 Custom</div>
-    <div id="customDateRange" style="display: none;"><div class="date-range-custom"><input type="date" id="customFromDate"><input type="date" id="customToDate"><button class="apply-custom" id="applyCustomBtn">Apply</button></div></div>
-    <button class="close-modal" id="closeDateModal">Close</button></div></div>
+<!-- Modals (same as before) -->
+<div id="storeModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">🏬 Select Store</div><div class="store-option" data-store="all" data-name="All Stores">🏢 All Stores (Combined)</div><div class="store-option" data-store="queens" data-name="Queensbay Mall">Queensbay Mall</div><div class="store-option" data-store="sunshine" data-name="Sunshine Square">Sunshine Square</div><div class="store-option" data-store="gurney_paragon" data-name="Gurney Paragon">Gurney Paragon</div><button class="close-modal" id="closeStoreModal">Cancel</button></div></div>
+<div id="dateModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">📅 Select Range</div><div class="preset-option" data-preset="today">Today</div><div class="preset-option" data-preset="week">This Week</div><div class="preset-option" data-preset="month">This Month</div><div class="preset-option" data-preset="year">This Year</div><div class="divider"></div><div class="preset-option" data-preset="custom">📆 Custom</div><div id="customDateRange" style="display: none;"><div class="date-range-custom"><input type="date" id="customFromDate"><input type="date" id="customToDate"><button class="apply-custom" id="applyCustomBtn">Apply</button></div></div><button class="close-modal" id="closeDateModal">Close</button></div></div>
 
 <script>
-    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwny61t_A8pFUcRZ_kXJQK-0gqHX3N1MM8VoK7KP7ZAUzd_ay_9sQnczanAneX7_NW0/exec";
+    const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzSBSELkgGm_XONQK1kydt6Ai0i4w5HEpzu8vjOlgEycf5rHHG4_JJZ2Crmsf6Hct8R2w/exec";
     const CACHE_TTL = 60000;
     const PRELOAD_DELAY = 800;
-    
     const cache = new Map();
     let currentAbortController = null;
-    
     const refreshBtn = document.getElementById('headerRefreshBtn');
     const storeSelectorBtn = document.getElementById('storeSelectorBtn');
     const storeNameSpan = document.getElementById('storeNameLabel');
@@ -230,164 +102,75 @@
     const rightArrow = document.getElementById('rightArrowBtn');
     const dateRangeLabelSpan = document.getElementById('dateRangeLabel');
     const errorDiv = document.getElementById('errorMsg');
-    
-    let currentStore = "queens";
-    let currentStoreDisplay = "Queensbay Mall";
-    let currentFrom = "", currentTo = "";
-    let currentPresetType = "day";
-    let currentDayDate = null;
+    let currentStore = "queens", currentStoreDisplay = "Queensbay Mall";
+    let currentFrom = "", currentTo = "", currentPresetType = "day", currentDayDate = null;
     let lastLoadedFrom = "", lastLoadedTo = "", lastLoadedStore = "";
-    let hasData = false;
-    let refreshInProgress = false;
-    let preloadTimer = null;
-    let trendChart = null;
-    let initialPreloadDone = false;
-    let currentChartType = "line";
+    let hasData = false, refreshInProgress = false, preloadTimer = null, trendChart = null, initialPreloadDone = false, currentChartType = "line";
     
-    function formatYMD(date) { let y=date.getFullYear(), m=String(date.getMonth()+1).padStart(2,'0'), d=String(date.getDate()).padStart(2,'0'); return `${y}-${m}-${d}`; }
-    function getWeekStart(date) { let d=new Date(date); const day=d.getDay(); const diff=(day===0?-6:1-day); d.setDate(d.getDate()+diff); return d; }
+    function formatYMD(d) { return d.toISOString().split('T')[0]; }
+    function getWeekStart(d) { let nd=new Date(d); const day=nd.getDay(); const diff=(day===0?-6:1-day); nd.setDate(nd.getDate()+diff); return nd; }
     function formatMYR(v) { return `RM ${(v||0).toFixed(2)}`; }
     function formatNumber(v) { return (parseInt(v)||0).toLocaleString(); }
+    function getCacheKey(a,s,f,t) { return `${a}|${s}|${f}|${t}`; }
+    function getCached(a,s,f,t) { const e=cache.get(getCacheKey(a,s,f,t)); if(e && (Date.now()-e.timestamp)<CACHE_TTL) return e.data; return null; }
+    function setCache(a,s,f,t,d) { cache.set(getCacheKey(a,s,f,t),{data:d,timestamp:Date.now()}); }
     
-    function getCacheKey(action, store, from, to) { return `${action}|${store}|${from}|${to}`; }
-    function getCached(action, store, from, to) { const key=getCacheKey(action,store,from,to); const entry=cache.get(key); if(entry && (Date.now()-entry.timestamp)<CACHE_TTL) return entry.data; return null; }
-    function setCache(action, store, from, to, data) { const key=getCacheKey(action,store,from,to); cache.set(key,{data,timestamp:Date.now()}); }
-    
-    function getAdjacentRange(direction) {
-        const delta = direction==='next'?1:-1;
-        if (currentPresetType==='day') { let date=currentDayDate?new Date(currentDayDate):new Date(); let newDate=new Date(date); newDate.setDate(date.getDate()+delta); return {from:formatYMD(newDate),to:formatYMD(newDate),type:'day'}; }
-        if (currentPresetType==='week') { let start=new Date(currentFrom); if(isNaN(start.getTime())) start=getWeekStart(new Date()); let newStart=new Date(start); newStart.setDate(start.getDate()+delta*7); let newEnd=new Date(newStart); newEnd.setDate(newStart.getDate()+6); return {from:formatYMD(newStart),to:formatYMD(newEnd),type:'week'}; }
-        if (currentPresetType==='month') { let start=new Date(currentFrom); if(isNaN(start.getTime())) start=new Date(new Date().getFullYear(), new Date().getMonth(),1); let newStart=new Date(start); newStart.setMonth(start.getMonth()+delta); let newEnd=new Date(newStart.getFullYear(), newStart.getMonth()+1,0); return {from:formatYMD(newStart),to:formatYMD(newEnd),type:'month'}; }
-        if (currentPresetType==='year') { let start=new Date(currentFrom); if(isNaN(start.getTime())) start=new Date(new Date().getFullYear(),0,1); let newYear=start.getFullYear()+delta; let newStart=new Date(newYear,0,1); let newEnd=new Date(newYear,11,31); return {from:formatYMD(newStart),to:formatYMD(newEnd),type:'year'}; }
+    function getAdjacentRange(dir) {
+        const delta=dir==='next'?1:-1;
+        if(currentPresetType==='day'){ let d=currentDayDate?new Date(currentDayDate):new Date(); let nd=new Date(d); nd.setDate(d.getDate()+delta); return {from:formatYMD(nd),to:formatYMD(nd)}; }
+        if(currentPresetType==='week'){ let start=new Date(currentFrom); if(isNaN(start)) start=getWeekStart(new Date()); let ns=new Date(start); ns.setDate(start.getDate()+delta*7); let ne=new Date(ns); ne.setDate(ns.getDate()+6); return {from:formatYMD(ns),to:formatYMD(ne)}; }
+        if(currentPresetType==='month'){ let start=currentFrom?new Date(currentFrom):new Date(); let ns=new Date(start); ns.setMonth(start.getMonth()+delta); let ne=new Date(ns.getFullYear(),ns.getMonth()+1,0); return {from:formatYMD(ns),to:formatYMD(ne)}; }
+        if(currentPresetType==='year'){ let start=currentFrom?new Date(currentFrom):new Date(); let ny=start.getFullYear()+delta; let ns=new Date(ny,0,1); let ne=new Date(ny,11,31); return {from:formatYMD(ns),to:formatYMD(ne)}; }
         return null;
     }
-    
-    async function silentPreload(store,from,to) { if(!store||!from||!to) return; if(getCached('getSalesReport',store,from,to)) return; try{ const controller=new AbortController(); const signal=controller.signal; await Promise.all([ fetchApiSilent('getSalesReport',store,from,to,signal), fetchApiSilent('getSalesChartData',store,from,to,signal), fetchApiSilent('getProductSalesReport',store,from,to,signal), fetchApiSilent('getEmployeeSalesData',store,from,to,signal) ]); } catch(err){ if(err.name!=='AbortError') console.warn(err); } }
-    async function fetchApiSilent(action,store,from,to,signal) { const cached=getCached(action,store,from,to); if(cached) return cached; const params=new URLSearchParams({action,store,from,to}); if(action==='getSalesReport') params.append('employeeId','all'), params.append('unsettledOnly','false'); if(action==='getSalesChartData'||action==='getProductSalesReport'||action==='getEmployeeSalesData') params.append('employeeId','all'); const url=`${BACKEND_URL}?${params.toString()}`; const res=await fetch(url,{method:'GET',signal,cache:'no-store'}); if(!res.ok) throw new Error(`HTTP ${res.status}`); const data=await res.json(); if(data&&data.success===false) throw new Error(data.error||"API error"); setCache(action,store,from,to,data); return data; }
-    function triggerAdjacentPreload() { if(preloadTimer) clearTimeout(preloadTimer); if(currentPresetType==='custom') return; preloadTimer=setTimeout(()=>{ const nextRange=getAdjacentRange('next'); const prevRange=getAdjacentRange('prev'); if(nextRange) silentPreload(currentStore,nextRange.from,nextRange.to); if(prevRange) silentPreload(currentStore,prevRange.from,prevRange.to); }, PRELOAD_DELAY); }
-    function preloadCommonPresets() { if(initialPreloadDone) return; initialPreloadDone=true; const today=new Date(); today.setHours(0,0,0,0); const weekStart=getWeekStart(today); const weekEnd=new Date(weekStart); weekEnd.setDate(weekStart.getDate()+6); const monthStart=new Date(today.getFullYear(),today.getMonth(),1); const monthEnd=new Date(today.getFullYear(),today.getMonth()+1,0); setTimeout(()=>{ silentPreload(currentStore,formatYMD(today),formatYMD(today)); silentPreload(currentStore,formatYMD(weekStart),formatYMD(weekEnd)); silentPreload(currentStore,formatYMD(monthStart),formatYMD(monthEnd)); },1000); }
-    
-    function applyPreset(preset,customFrom=null,customTo=null) {
-        const today=new Date(); today.setHours(0,0,0,0);
-        if(preset==='custom' && customFrom && customTo) { currentPresetType='custom'; currentFrom=customFrom; currentTo=customTo; dateRangeLabelSpan.innerText=`${customFrom} → ${customTo}`; refreshDashboard(); return; }
-        if(preset==='today') { currentPresetType='day'; currentDayDate=new Date(today); currentFrom=formatYMD(currentDayDate); currentTo=formatYMD(currentDayDate); dateRangeLabelSpan.innerText=formatYMD(currentDayDate); refreshDashboard(); return; }
-        if(preset==='week') { let start=getWeekStart(today); let end=new Date(start); end.setDate(start.getDate()+6); currentPresetType='week'; currentFrom=formatYMD(start); currentTo=formatYMD(end); dateRangeLabelSpan.innerText=`Week of ${formatYMD(start)}`; refreshDashboard(); return; }
-        if(preset==='month') { let start=new Date(today.getFullYear(),today.getMonth(),1); let end=new Date(today.getFullYear(),today.getMonth()+1,0); currentPresetType='month'; currentFrom=formatYMD(start); currentTo=formatYMD(end); dateRangeLabelSpan.innerText=start.toLocaleString('default',{month:'long',year:'numeric'}); refreshDashboard(); return; }
-        if(preset==='year') { let start=new Date(today.getFullYear(),0,1); let end=new Date(today.getFullYear(),11,31); currentPresetType='year'; currentFrom=formatYMD(start); currentTo=formatYMD(end); dateRangeLabelSpan.innerText=`${today.getFullYear()}`; refreshDashboard(); }
+    async function silentPreload(store,from,to) { if(!store||!from||!to||getCached('getSalesReport',store,from,to)) return; try{ const c=new AbortController(); const s=c.signal; await Promise.all([ fetchApiSilent('getSalesReport',store,from,to,s), fetchApiSilent('getSalesChartData',store,from,to,s), fetchApiSilent('getDiscountedProductSalesReport',store,from,to,s), fetchApiSilent('getEmployeeSalesData',store,from,to,s) ]); } catch(e){} }
+    async function fetchApiSilent(a,s,f,t,sig) { const c=getCached(a,s,f,t); if(c) return c; const url=`${BACKEND_URL}?action=${a}&store=${s}&from=${f}&to=${t}&employeeId=all`; const res=await fetch(url,{method:'GET',signal:sig}); if(!res.ok) throw new Error(); const d=await res.json(); if(d&&d.success===false) throw new Error(); setCache(a,s,f,t,d); return d; }
+    function triggerAdjacentPreload() { if(preloadTimer) clearTimeout(preloadTimer); if(currentPresetType==='custom') return; preloadTimer=setTimeout(()=>{ const nr=getAdjacentRange('next'), pr=getAdjacentRange('prev'); if(nr) silentPreload(currentStore,nr.from,nr.to); if(pr) silentPreload(currentStore,pr.from,pr.to); }, PRELOAD_DELAY); }
+    function preloadCommonPresets() { if(initialPreloadDone) return; initialPreloadDone=true; const t=new Date(); t.setHours(0,0,0,0); const ws=getWeekStart(t), we=new Date(ws); we.setDate(ws.getDate()+6); const ms=new Date(t.getFullYear(),t.getMonth(),1), me=new Date(t.getFullYear(),t.getMonth()+1,0); setTimeout(()=>{ silentPreload(currentStore,formatYMD(t),formatYMD(t)); silentPreload(currentStore,formatYMD(ws),formatYMD(we)); silentPreload(currentStore,formatYMD(ms),formatYMD(me)); },1000); }
+    function applyPreset(preset,customFrom,customTo) { const t=new Date(); t.setHours(0,0,0,0); if(preset==='custom' && customFrom && customTo){ currentPresetType='custom'; currentFrom=customFrom; currentTo=customTo; dateRangeLabelSpan.innerText=`${customFrom} → ${customTo}`; refreshDashboard(); return; }
+        if(preset==='today'){ currentPresetType='day'; currentDayDate=new Date(t); currentFrom=formatYMD(currentDayDate); currentTo=currentFrom; dateRangeLabelSpan.innerText=currentFrom; refreshDashboard(); return; }
+        if(preset==='week'){ let start=getWeekStart(t), end=new Date(start); end.setDate(start.getDate()+6); currentPresetType='week'; currentFrom=formatYMD(start); currentTo=formatYMD(end); dateRangeLabelSpan.innerText=`Week of ${currentFrom}`; refreshDashboard(); return; }
+        if(preset==='month'){ let start=new Date(t.getFullYear(),t.getMonth(),1), end=new Date(t.getFullYear(),t.getMonth()+1,0); currentPresetType='month'; currentFrom=formatYMD(start); currentTo=formatYMD(end); dateRangeLabelSpan.innerText=start.toLocaleString('default',{month:'long',year:'numeric'}); refreshDashboard(); return; }
+        if(preset==='year'){ currentPresetType='year'; currentFrom=formatYMD(new Date(t.getFullYear(),0,1)); currentTo=formatYMD(new Date(t.getFullYear(),11,31)); dateRangeLabelSpan.innerText=`${t.getFullYear()}`; refreshDashboard(); }
     }
-    
-    function shiftDateRange(direction) {
-        if(refreshInProgress) return;
-        const delta=direction==='left'?-1:1;
-        if(currentPresetType==='custom'){ showError("Custom range cannot be shifted. Select a preset."); return; }
-        if(currentPresetType==='day'){ if(!currentDayDate) currentDayDate=new Date(); let newDate=new Date(currentDayDate); newDate.setDate(currentDayDate.getDate()+delta); currentDayDate=newDate; currentFrom=formatYMD(currentDayDate); currentTo=formatYMD(currentDayDate); dateRangeLabelSpan.innerText=formatYMD(currentDayDate); refreshDashboard(); return; }
-        if(currentPresetType==='week'){ let start=new Date(currentFrom); if(isNaN(start.getTime())) start=getWeekStart(new Date()); let newStart=new Date(start); newStart.setDate(start.getDate()+delta*7); let newEnd=new Date(newStart); newEnd.setDate(newStart.getDate()+6); currentFrom=formatYMD(newStart); currentTo=formatYMD(newEnd); dateRangeLabelSpan.innerText=`Week of ${formatYMD(newStart)}`; refreshDashboard(); return; }
-        if(currentPresetType==='month'){ let start=new Date(currentFrom); if(isNaN(start.getTime())) start=new Date(new Date().getFullYear(), new Date().getMonth(),1); let newStart=new Date(start); newStart.setMonth(start.getMonth()+delta); let newEnd=new Date(newStart.getFullYear(), newStart.getMonth()+1,0); currentFrom=formatYMD(newStart); currentTo=formatYMD(newEnd); dateRangeLabelSpan.innerText=newStart.toLocaleString('default',{month:'long',year:'numeric'}); refreshDashboard(); return; }
-        if(currentPresetType==='year'){ let start=new Date(currentFrom); if(isNaN(start.getTime())) start=new Date(new Date().getFullYear(),0,1); let newYear=start.getFullYear()+delta; let newStart=new Date(newYear,0,1); let newEnd=new Date(newYear,11,31); currentFrom=formatYMD(newStart); currentTo=formatYMD(newEnd); dateRangeLabelSpan.innerText=`${newYear}`; refreshDashboard(); }
+    function shiftDateRange(dir) { if(refreshInProgress) return; const delta=dir==='left'?-1:1; if(currentPresetType==='custom'){ showError("Custom range cannot be shifted. Select a preset."); return; }
+        if(currentPresetType==='day'){ if(!currentDayDate) currentDayDate=new Date(); let nd=new Date(currentDayDate); nd.setDate(currentDayDate.getDate()+delta); currentDayDate=nd; currentFrom=formatYMD(currentDayDate); currentTo=currentFrom; dateRangeLabelSpan.innerText=currentFrom; refreshDashboard(); return; }
+        if(currentPresetType==='week'){ let start=new Date(currentFrom); if(isNaN(start)) start=getWeekStart(new Date()); let ns=new Date(start); ns.setDate(start.getDate()+delta*7); let ne=new Date(ns); ne.setDate(ns.getDate()+6); currentFrom=formatYMD(ns); currentTo=formatYMD(ne); dateRangeLabelSpan.innerText=`Week of ${currentFrom}`; refreshDashboard(); return; }
+        if(currentPresetType==='month'){ let start=new Date(currentFrom); let ns=new Date(start); ns.setMonth(start.getMonth()+delta); let ne=new Date(ns.getFullYear(),ns.getMonth()+1,0); currentFrom=formatYMD(ns); currentTo=formatYMD(ne); dateRangeLabelSpan.innerText=ns.toLocaleString('default',{month:'long',year:'numeric'}); refreshDashboard(); return; }
+        if(currentPresetType==='year'){ let start=new Date(currentFrom); let ny=start.getFullYear()+delta; currentFrom=formatYMD(new Date(ny,0,1)); currentTo=formatYMD(new Date(ny,11,31)); dateRangeLabelSpan.innerText=`${ny}`; refreshDashboard(); }
     }
-    
-    async function fetchApi(action,store,from,to,signal) { const cached=getCached(action,store,from,to); if(cached) return cached; const params=new URLSearchParams({action,store,from,to}); if(action==='getSalesReport') params.append('employeeId','all'), params.append('unsettledOnly','false'); if(action==='getSalesChartData'||action==='getProductSalesReport'||action==='getEmployeeSalesData') params.append('employeeId','all'); const url=`${BACKEND_URL}?${params.toString()}`; const res=await fetch(url,{method:'GET',signal,cache:'no-store'}); if(!res.ok) throw new Error(`HTTP ${res.status}`); const data=await res.json(); if(data&&data.success===false) throw new Error(data.error||"API error"); setCache(action,store,from,to,data); return data; }
-    async function fetchAllData(store,from,to,signal) { const [sales,chart,products,employees]=await Promise.all([ fetchApi('getSalesReport',store,from,to,signal), fetchApi('getSalesChartData',store,from,to,signal), fetchApi('getProductSalesReport',store,from,to,signal), fetchApi('getEmployeeSalesData',store,from,to,signal) ]); return {sales,chart,products,employees}; }
-    
-    function updateUI(data) {
-        const {sales,chart,products,employees}=data;
-        document.getElementById('totalSales').innerText=formatMYR(sales.totalSales);
-        document.getElementById('txnCount').innerText=formatNumber(sales.transactionCount);
-        document.getElementById('itemsSold').innerText=formatNumber(sales.totalItems);
-        const avg=sales.transactionCount?sales.totalSales/sales.transactionCount:0;
-        document.getElementById('avgTicket').innerText=formatMYR(avg);
-        document.getElementById('cashAmount').innerText=formatMYR(sales.cashTotal);
-        document.getElementById('cardAmount').innerText=formatMYR(sales.cardTotal);
-        document.getElementById('alipayAmount').innerText=formatMYR(sales.alipayTotal);
-        document.getElementById('otherAmount').innerText=formatMYR(sales.otherTotal);
-        const refundPos=(sales.refundTotal||0)*-1;
-        document.getElementById('refundAmount').innerText=formatMYR(refundPos>0?refundPos:0);
-        
-        // Staff Sales
-        const staffContainer=document.getElementById('staffSalesList');
-        if(!employees.labels||employees.labels.length===0){ staffContainer.innerHTML='<div class="loader">No staff sales data</div>'; }
-        else{ let html='<table class="mini-table"><thead><tr><th>Staff</th><th>Sales (RM)</th></tr></thead><tbody>';
-          for(let i=0;i<employees.labels.length;i++){ html+=`<tr><td><strong>${escapeHtml(employees.labels[i])}</strong></td><td>${formatMYR(employees.data[i])}</td>`; }
-          html+=`</tbody></table>`; staffContainer.innerHTML=html; }
-        
-        // Category Sales (now based on discounted product totals)
-        const categoryContainer=document.getElementById('categorySalesList');
-        if(!products.products||products.products.length===0){ categoryContainer.innerHTML='<div class="loader">No category data</div>'; }
-        else{ 
-            const catRevenue=new Map(); const catQuantity=new Map();
-            products.products.forEach(p=>{ const cat=p.category||'Uncategorized'; catRevenue.set(cat,(catRevenue.get(cat)||0)+p.total); catQuantity.set(cat,(catQuantity.get(cat)||0)+(p.quantity||0)); });
-            let sorted=Array.from(catRevenue.entries()).sort((a,b)=>b[1]-a[1]); 
-            let html='<table class="mini-table"><thead><tr><th>Category</th><th>Quantity Sold</th><th>Total Sales (RM)</th></tr></thead><tbody>';
-            sorted.forEach(([cat,amt])=>{ const qty=catQuantity.get(cat)||0; html+=`<tr><td><strong>${escapeHtml(cat)}</strong></td><td>${formatNumber(qty)}</td><td>${formatMYR(amt)}</td>`; });
-            html+=`</tbody></table>`; categoryContainer.innerHTML=html; }
-        
-        // Top Products (now discounted)
-        const prodContainer=document.getElementById('productsList');
-        if(!products.products||products.products.length===0){ prodContainer.innerHTML='<div class="loader">No product sales</div>'; }
-        else{ const top=[...products.products].sort((a,b)=>(b.total||0)-(a.total||0)).slice(0,7); let html='<table class="mini-table"><thead><tr><th>Product</th><th>Qty Sold</th><th>Revenue (RM)</th></tr></thead><tbody>';
-          top.forEach(p=>{ html+=`<tr><td><strong>${escapeHtml(p.name||'')}</strong><br><span class="badge">${p.category||''}</span></td><td>${formatNumber(p.quantity)}</td><td>${formatMYR(p.total)}</td>`; });
-          html+=`</tbody></table>`; prodContainer.innerHTML=html; }
-        
-        renderTrendChart(chart);
+    async function fetchApi(a,s,f,t,sig) { const c=getCached(a,s,f,t); if(c) return c; const url=`${BACKEND_URL}?action=${a}&store=${s}&from=${f}&to=${t}&employeeId=all`; const res=await fetch(url,{method:'GET',signal:sig}); if(!res.ok) throw new Error(`HTTP ${res.status}`); const d=await res.json(); if(d&&d.success===false) throw new Error(d.error||"API error"); setCache(a,s,f,t,d); return d; }
+    async function fetchAllData(s,f,t,sig) { const [sales,chart,products,employees]=await Promise.all([ fetchApi('getSalesReport',s,f,t,sig), fetchApi('getSalesChartData',s,f,t,sig), fetchApi('getDiscountedProductSalesReport',s,f,t,sig), fetchApi('getEmployeeSalesData',s,f,t,sig) ]); return {sales,chart,products,employees}; }
+    function updateUI(data) { const {sales,chart,products,employees}=data;
+        document.getElementById('totalSales').innerText=formatMYR(sales.totalSales); document.getElementById('txnCount').innerText=formatNumber(sales.transactionCount);
+        document.getElementById('itemsSold').innerText=formatNumber(sales.totalItems); const avg=sales.transactionCount?sales.totalSales/sales.transactionCount:0; document.getElementById('avgTicket').innerText=formatMYR(avg);
+        document.getElementById('cashAmount').innerText=formatMYR(sales.cashTotal); document.getElementById('cardAmount').innerText=formatMYR(sales.cardTotal);
+        document.getElementById('alipayAmount').innerText=formatMYR(sales.alipayTotal); document.getElementById('otherAmount').innerText=formatMYR(sales.otherTotal);
+        const refundPos=(sales.refundTotal||0)*-1; document.getElementById('refundAmount').innerText=formatMYR(refundPos>0?refundPos:0);
+        const staffDiv=document.getElementById('staffSalesList'); if(!employees.labels||!employees.labels.length){ staffDiv.innerHTML='<div class="loader">No staff sales data</div>'; } else{ let h='<table class="mini-table"><thead><tr><th>Staff</th><th>Sales (RM)</th></tr></thead><tbody>'; for(let i=0;i<employees.labels.length;i++) h+=`<tr><td><strong>${escapeHtml(employees.labels[i])}</strong></td><td>${formatMYR(employees.data[i])}</td></tr>`; h+='</tbody></table>'; staffDiv.innerHTML=h; }
+        const catDiv=document.getElementById('categorySalesList'); if(!products.products||!products.products.length){ catDiv.innerHTML='<div class="loader">No category data</div>'; } else{ const rev=new Map(), qty=new Map(); products.products.forEach(p=>{ const c=p.category||'Uncategorized'; rev.set(c,(rev.get(c)||0)+p.total); qty.set(c,(qty.get(c)||0)+(p.quantity||0)); }); const sorted=Array.from(rev.entries()).sort((a,b)=>b[1]-a[1]); let h='<table class="mini-table"><thead><tr><th>Category</th><th>Quantity Sold</th><th>Total Sales (RM)</th></tr></thead><tbody>'; sorted.forEach(([c,amt])=>{ h+=`<tr><td><strong>${escapeHtml(c)}</strong></td><td>${formatNumber(qty.get(c))}</td><td>${formatMYR(amt)}</td></tr>`; }); h+='</tbody></table>'; catDiv.innerHTML=h; }
+        const prodDiv=document.getElementById('productsList'); if(!products.products||!products.products.length){ prodDiv.innerHTML='<div class="loader">No product sales</div>'; } else{ const top=[...products.products].sort((a,b)=>(b.total||0)-(a.total||0)).slice(0,7); let h='<table class="mini-table"><thead><tr><th>Product</th><th>Qty Sold</th><th>Revenue (RM)</th></tr></thead><tbody>'; top.forEach(p=>{ h+=`<tr><td><strong>${escapeHtml(p.name||'')}</strong><br><span class="badge">${p.category||''}</span></td><td>${formatNumber(p.quantity)}</td><td>${formatMYR(p.total)}</td></tr>`; }); h+='</tbody></table>'; prodDiv.innerHTML=h; }
+        const ctx=document.getElementById('trendChart').getContext('2d'); if(trendChart) trendChart.destroy(); let labels=[], vals=[]; if(chart.type==='hourly' && chart.hourly){ labels=chart.hourly.labels; vals=chart.hourly.data; } else if(chart.salesByDay){ labels=chart.salesByDay.labels; vals=chart.salesByDay.data; } trendChart=new Chart(ctx,{ type:currentChartType, data:{ labels, datasets:[{ label:'Sales (RM)', data:vals, borderColor:'#2b6e9e', backgroundColor:currentChartType==='bar'?'rgba(43,110,158,0.6)':'rgba(43,110,158,0.1)', borderWidth:2, tension:0.3, fill:currentChartType!=='bar', pointRadius:currentChartType==='line'?3:0 }] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ tooltip:{ callbacks:{ label:(ctx)=>`RM ${ctx.raw.toFixed(2)}` } } } } });
         hasData=true;
     }
-    
-    function renderTrendChart(chartData) {
-        const ctx=document.getElementById('trendChart').getContext('2d');
-        if(trendChart) trendChart.destroy();
-        let labels=[], values=[];
-        if(chartData.type==='hourly' && chartData.hourly){ labels=chartData.hourly.labels; values=chartData.hourly.data; }
-        else if(chartData.salesByDay){ labels=chartData.salesByDay.labels; values=chartData.salesByDay.data; }
-        trendChart=new Chart(ctx,{ type:currentChartType, data:{ labels, datasets:[{ label:'Sales (RM)', data:values, borderColor:'#2b6e9e', backgroundColor:currentChartType==='bar'?'rgba(43,110,158,0.6)':'rgba(43,110,158,0.1)', borderWidth:2, tension:0.3, fill:currentChartType!=='bar', pointRadius:currentChartType==='line'?3:0 }] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ tooltip:{ callbacks:{ label:(ctx)=>`RM ${ctx.raw.toFixed(2)}` } } } } });
-    }
-    
-    async function refreshDashboard() {
-        if(refreshInProgress && currentAbortController){ currentAbortController.abort(); refreshBtn.classList.remove('refresh-spin'); refreshInProgress=false; }
-        if(!currentFrom||!currentTo) return;
-        if(hasData && currentFrom===lastLoadedFrom && currentTo===lastLoadedTo && currentStore===lastLoadedStore){ if(!initialPreloadDone) preloadCommonPresets(); return; }
-        refreshInProgress=true; refreshBtn.classList.add('refresh-spin'); errorDiv.style.display='none';
-        if(currentAbortController) currentAbortController.abort();
-        currentAbortController=new AbortController();
-        const signal=currentAbortController.signal;
-        try{ const data=await fetchAllData(currentStore,currentFrom,currentTo,signal); updateUI(data); lastLoadedFrom=currentFrom; lastLoadedTo=currentTo; lastLoadedStore=currentStore; triggerAdjacentPreload(); if(!initialPreloadDone) preloadCommonPresets(); }
-        catch(err){ if(err.name==='AbortError') return; showError(err.message); }
-        finally{ refreshInProgress=false; refreshBtn.classList.remove('refresh-spin'); if(currentAbortController?.signal===signal) currentAbortController=null; }
-    }
-    
+    async function refreshDashboard() { if(refreshInProgress && currentAbortController){ currentAbortController.abort(); refreshBtn.classList.remove('refresh-spin'); refreshInProgress=false; } if(!currentFrom||!currentTo) return; if(hasData && currentFrom===lastLoadedFrom && currentTo===lastLoadedTo && currentStore===lastLoadedStore){ if(!initialPreloadDone) preloadCommonPresets(); return; } refreshInProgress=true; refreshBtn.classList.add('refresh-spin'); errorDiv.style.display='none'; if(currentAbortController) currentAbortController.abort(); currentAbortController=new AbortController(); const signal=currentAbortController.signal; try{ const data=await fetchAllData(currentStore,currentFrom,currentTo,signal); updateUI(data); lastLoadedFrom=currentFrom; lastLoadedTo=currentTo; lastLoadedStore=currentStore; triggerAdjacentPreload(); if(!initialPreloadDone) preloadCommonPresets(); } catch(err){ if(err.name!=='AbortError') showError(err.message); } finally{ refreshInProgress=false; refreshBtn.classList.remove('refresh-spin'); if(currentAbortController?.signal===signal) currentAbortController=null; } }
     function showError(msg){ errorDiv.innerText=msg; errorDiv.style.display='block'; setTimeout(()=>errorDiv.style.display='none',4000); }
-    function escapeHtml(str){ if(!str) return ''; return str.replace(/[&<>]/g,m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
-    
-    // Modal handlers
-    const storeModal=document.getElementById('storeModal'); const dateModal=document.getElementById('dateModal');
+    function escapeHtml(s){ if(!s) return ''; return s.replace(/[&<>]/g,m=>m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
+    const storeModal=document.getElementById('storeModal'), dateModal=document.getElementById('dateModal');
     function openStoreModal(){ storeModal.classList.add('active'); } function closeStoreModal(){ storeModal.classList.remove('active'); }
     function openDateModal(){ document.getElementById('customDateRange').style.display='none'; dateModal.classList.add('active'); } function closeDateModal(){ dateModal.classList.remove('active'); }
-    function selectStore(storeKey,storeDisplayName){ currentStore=storeKey; currentStoreDisplay=storeDisplayName; storeNameSpan.innerText=storeDisplayName.length>20?storeDisplayName.substring(0,18)+'…':storeDisplayName; closeStoreModal(); hasData=false; lastLoadedStore=""; refreshDashboard(); }
-    function selectDatePreset(preset){ if(preset==='custom'){ document.getElementById('customDateRange').style.display='block'; return; } applyPreset(preset); closeDateModal(); }
-    function applyCustomRange(){ const from=document.getElementById('customFromDate').value; const to=document.getElementById('customToDate').value; if(!from||!to){ showError("Select both dates"); return; } if(from>to){ showError("Invalid range"); return; } applyPreset('custom',from,to); closeDateModal(); }
-    
-    // Chart toggle
-    document.querySelectorAll('.toggle-btn').forEach(btn=>{ btn.addEventListener('click',()=>{ document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); currentChartType=btn.getAttribute('data-chart-type'); if(hasData){ const oldData=trendChart?.data; if(oldData) renderTrendChart({salesByDay:{labels:oldData.labels,data:oldData.datasets[0].data}}); } }); });
-    
-    refreshBtn.addEventListener('click',refreshDashboard);
-    storeSelectorBtn.addEventListener('click',openStoreModal);
-    dateTriggerBtn.addEventListener('click',openDateModal);
-    leftArrow.addEventListener('click',()=>shiftDateRange('left'));
-    rightArrow.addEventListener('click',()=>shiftDateRange('right'));
-    document.getElementById('closeStoreModal').addEventListener('click',closeStoreModal);
-    document.getElementById('closeDateModal').addEventListener('click',closeDateModal);
-    document.querySelectorAll('#storeModal .store-option').forEach(opt=>opt.addEventListener('click',()=>{ const storeKey=opt.getAttribute('data-store'); const storeName=opt.getAttribute('data-name'); selectStore(storeKey,storeName); }));
-    document.querySelectorAll('#dateModal .preset-option').forEach(opt=>{ const preset=opt.getAttribute('data-preset'); if(preset!=='custom') opt.addEventListener('click',()=>selectDatePreset(preset)); else opt.addEventListener('click',()=>selectDatePreset('custom')); });
+    function selectStore(storeKey,name){ currentStore=storeKey; currentStoreDisplay=name; storeNameSpan.innerText=name; closeStoreModal(); hasData=false; lastLoadedStore=""; refreshDashboard(); }
+    function selectDatePreset(p){ if(p==='custom'){ document.getElementById('customDateRange').style.display='block'; return; } applyPreset(p); closeDateModal(); }
+    function applyCustomRange(){ const from=document.getElementById('customFromDate').value, to=document.getElementById('customToDate').value; if(!from||!to){ showError("Select both dates"); return; } if(from>to){ showError("Invalid range"); return; } applyPreset('custom',from,to); closeDateModal(); }
+    document.querySelectorAll('.toggle-btn').forEach(btn=>btn.addEventListener('click',()=>{ document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); currentChartType=btn.getAttribute('data-chart-type'); if(hasData){ const oldData=trendChart?.data; if(oldData) renderTrendChart({salesByDay:{labels:oldData.labels,data:oldData.datasets[0].data}}); } }));
+    refreshBtn.addEventListener('click',refreshDashboard); storeSelectorBtn.addEventListener('click',openStoreModal); dateTriggerBtn.addEventListener('click',openDateModal); leftArrow.addEventListener('click',()=>shiftDateRange('left')); rightArrow.addEventListener('click',()=>shiftDateRange('right'));
+    document.getElementById('closeStoreModal').addEventListener('click',closeStoreModal); document.getElementById('closeDateModal').addEventListener('click',closeDateModal);
+    document.querySelectorAll('#storeModal .store-option').forEach(opt=>opt.addEventListener('click',()=>selectStore(opt.dataset.store,opt.dataset.name)));
+    document.querySelectorAll('#dateModal .preset-option').forEach(opt=>{ if(opt.dataset.preset!=='custom') opt.addEventListener('click',()=>selectDatePreset(opt.dataset.preset)); else opt.addEventListener('click',()=>selectDatePreset('custom')); });
     document.getElementById('applyCustomBtn').addEventListener('click',applyCustomRange);
-    storeModal.addEventListener('click',(e)=>{ if(e.target===storeModal) closeStoreModal(); });
-    dateModal.addEventListener('click',(e)=>{ if(e.target===dateModal) closeDateModal(); });
-    
-    // Initialize
-    const today=new Date(); today.setHours(0,0,0,0);
-    currentPresetType='day'; currentDayDate=new Date(today);
-    currentFrom=formatYMD(currentDayDate); currentTo=formatYMD(currentDayDate);
-    dateRangeLabelSpan.innerText=formatYMD(currentDayDate);
-    storeNameSpan.innerText="Queensbay Mall";
-    refreshDashboard();
+    storeModal.addEventListener('click',(e)=>{ if(e.target===storeModal) closeStoreModal(); }); dateModal.addEventListener('click',(e)=>{ if(e.target===dateModal) closeDateModal(); });
+    const today=new Date(); today.setHours(0,0,0,0); currentPresetType='day'; currentDayDate=new Date(today); currentFrom=formatYMD(currentDayDate); currentTo=currentFrom; dateRangeLabelSpan.innerText=currentFrom; storeNameSpan.innerText="Queensbay Mall"; refreshDashboard();
+    function renderTrendChart(chartData){ const ctx=document.getElementById('trendChart').getContext('2d'); if(trendChart) trendChart.destroy(); let labels=[], vals=[]; if(chartData.type==='hourly' && chartData.hourly){ labels=chartData.hourly.labels; vals=chartData.hourly.data; } else if(chartData.salesByDay){ labels=chartData.salesByDay.labels; vals=chartData.salesByDay.data; } trendChart=new Chart(ctx,{ type:currentChartType, data:{ labels, datasets:[{ label:'Sales (RM)', data:vals, borderColor:'#2b6e9e', backgroundColor:currentChartType==='bar'?'rgba(43,110,158,0.6)':'rgba(43,110,158,0.1)', borderWidth:2, tension:0.3, fill:currentChartType!=='bar', pointRadius:currentChartType==='line'?3:0 }] }, options:{ responsive:true, maintainAspectRatio:true, plugins:{ tooltip:{ callbacks:{ label:(ctx)=>`RM ${ctx.raw.toFixed(2)}` } } } } }); }
 </script>
 </body>
 </html>
