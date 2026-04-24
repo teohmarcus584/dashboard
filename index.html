@@ -12,7 +12,6 @@
         .dashboard-container { width: 100%; padding: 0 20px; }
         @media (min-width: 1400px) { .dashboard-container { padding: 0 40px; } }
         
-        /* Header - new layout: refresh left, store right */
         .app-header {
             background: white; padding: 12px 20px; border-bottom: 1px solid #eef2f8;
             display: flex; align-items: center; justify-content: space-between;
@@ -39,7 +38,6 @@
         .store-icon-small { font-size: 1.4rem; }
         .store-name { font-weight: 600; font-size: 0.9rem; color: #1e4668; max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        /* Date control */
         .date-control {
             display: flex;
             align-items: center;
@@ -64,7 +62,6 @@
         .date-trigger-btn:active { transform: scale(0.97); background: #f8fafd; }
         .date-range-label { white-space: nowrap; }
         
-        /* Chart toggle */
         .chart-header {
             display: flex;
             justify-content: space-between;
@@ -94,7 +91,6 @@
             color: white;
         }
         
-        /* Cards */
         .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 28px; }
         .kpi-card { background: white; border-radius: 32px; padding: 20px 16px; border: 1px solid #eef2f8; }
         .kpi-label { font-size: 0.9rem; font-weight: 700; color: #4a627a; }
@@ -118,7 +114,6 @@
         .refresh-spin { animation: spin 0.6s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* Modals (unchanged) */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(3px); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; visibility: hidden; opacity: 0; transition: 0.2s; }
         .modal-overlay.active { visibility: visible; opacity: 1; }
         .modal-bottom { background: white; width: 100%; max-width: 520px; border-radius: 32px 32px 0 0; padding: 24px 20px 32px; transform: translateY(100%); transition: transform 0.25s ease-out; }
@@ -163,7 +158,6 @@
         <div class="kpi-card"><div class="kpi-label">AVG. TICKET</div><div class="kpi-value" id="avgTicket">—</div></div>
     </div>
     
-    <!-- NEW: Staff Sales Summary -->
     <div class="section-card" id="staffSummaryCard">
         <div class="section-title">👥 Staff Sales Summary</div>
         <div id="staffSalesList">Loading...</div>
@@ -196,20 +190,21 @@
         <div id="productsList">Loading...</div>
     </div>
     
-    <!-- NEW: Sales by Category -->
+    <!-- Sales by Category with Quantity -->
     <div class="section-card">
         <div class="section-title">📊 Sales by Category</div>
         <div id="categorySalesList">Loading...</div>
     </div>
 </div>
 
-<!-- Modals (updated store list includes All Stores) -->
+<!-- Store Modal -->
 <div id="storeModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">🏬 Select Store</div>
     <div class="store-option" data-store="all" data-name="All Stores">🏢 All Stores (Combined)</div>
     <div class="store-option" data-store="queens" data-name="Queensbay Mall">Queensbay Mall</div>
     <div class="store-option" data-store="sunshine" data-name="Sunshine Square">Sunshine Square</div>
     <div class="store-option" data-store="gurney_paragon" data-name="Gurney Paragon">Gurney Paragon</div>
     <button class="close-modal" id="closeStoreModal">Cancel</button></div></div>
+<!-- Date Modal -->
 <div id="dateModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">📅 Select Range</div>
     <div class="preset-option" data-preset="today">Today</div><div class="preset-option" data-preset="week">This Week</div>
     <div class="preset-option" data-preset="month">This Month</div><div class="preset-option" data-preset="year">This Year</div>
@@ -225,7 +220,6 @@
     const cache = new Map();
     let currentAbortController = null;
     
-    // DOM elements
     const refreshBtn = document.getElementById('headerRefreshBtn');
     const storeSelectorBtn = document.getElementById('storeSelectorBtn');
     const storeNameSpan = document.getElementById('storeNameLabel');
@@ -235,7 +229,6 @@
     const dateRangeLabelSpan = document.getElementById('dateRangeLabel');
     const errorDiv = document.getElementById('errorMsg');
     
-    // State
     let currentStore = "queens";
     let currentStoreDisplay = "Queensbay Mall";
     let currentFrom = "", currentTo = "";
@@ -245,9 +238,9 @@
     let hasData = false;
     let refreshInProgress = false;
     let preloadTimer = null;
-    let trendChart = null, employeeChart = null;
+    let trendChart = null;
     let initialPreloadDone = false;
-    let currentChartType = "line"; // 'line' or 'bar'
+    let currentChartType = "line";
     
     function formatYMD(date) { let y=date.getFullYear(), m=String(date.getMonth()+1).padStart(2,'0'), d=String(date.getDate()).padStart(2,'0'); return `${y}-${m}-${d}`; }
     function getWeekStart(date) { let d=new Date(date); const day=d.getDay(); const diff=(day===0?-6:1-day); d.setDate(d.getDate()+diff); return d; }
@@ -308,29 +301,31 @@
         const refundPos=(sales.refundTotal||0)*-1;
         document.getElementById('refundAmount').innerText=formatMYR(refundPos>0?refundPos:0);
         
-        // Staff Sales Summary (from employees data)
+        // Staff Sales Summary
         const staffContainer=document.getElementById('staffSalesList');
         if(!employees.labels||employees.labels.length===0){ staffContainer.innerHTML='<div class="loader">No staff sales data</div>'; }
         else{ let html='<table class="mini-table"><thead><tr><th>Staff</th><th>Sales (RM)</th></tr></thead><tbody>';
-          for(let i=0;i<employees.labels.length;i++){ html+=`<tr><td><strong>${escapeHtml(employees.labels[i])}</strong></td><td>${formatMYR(employees.data[i])}</td></tr>`; }
+          for(let i=0;i<employees.labels.length;i++){ html+=`<tr><td><strong>${escapeHtml(employees.labels[i])}</strong></td><td>${formatMYR(employees.data[i])}</td>`; }
           html+=`</tbody></table>`; staffContainer.innerHTML=html; }
         
-        // Sales by Category
+        // Sales by Category with Quantity
         const categoryContainer=document.getElementById('categorySalesList');
         if(!products.products||products.products.length===0){ categoryContainer.innerHTML='<div class="loader">No category data</div>'; }
-        else{ const catMap=new Map(); products.products.forEach(p=>{ const cat=p.category||'Uncategorized'; catMap.set(cat,(catMap.get(cat)||0)+p.total); });
-          let sorted=Array.from(catMap.entries()).sort((a,b)=>b[1]-a[1]); let html='<table class="mini-table"><thead><tr><th>Category</th><th>Total Sales (RM)</th></tr></thead><tbody>';
-          sorted.forEach(([cat,amt])=>{ html+=`<tr><td><strong>${escapeHtml(cat)}</strong></td><td>${formatMYR(amt)}</td></tr>`; });
-          html+=`</tbody></table>`; categoryContainer.innerHTML=html; }
+        else{ 
+            const catRevenue=new Map(); const catQuantity=new Map();
+            products.products.forEach(p=>{ const cat=p.category||'Uncategorized'; catRevenue.set(cat,(catRevenue.get(cat)||0)+p.total); catQuantity.set(cat,(catQuantity.get(cat)||0)+(p.quantity||0)); });
+            let sorted=Array.from(catRevenue.entries()).sort((a,b)=>b[1]-a[1]); 
+            let html='<table class="mini-table"><thead><tr><th>Category</th><th>Quantity Sold</th><th>Total Sales (RM)</th></tr></thead><tbody>';
+            sorted.forEach(([cat,amt])=>{ const qty=catQuantity.get(cat)||0; html+=`<tr><td><strong>${escapeHtml(cat)}</strong></td><td>${formatNumber(qty)}</td><td>${formatMYR(amt)}</td>`; });
+            html+=`</tbody></table>`; categoryContainer.innerHTML=html; }
         
         // Top Products
         const prodContainer=document.getElementById('productsList');
         if(!products.products||products.products.length===0){ prodContainer.innerHTML='<div class="loader">No product sales</div>'; }
         else{ const top=[...products.products].sort((a,b)=>(b.total||0)-(a.total||0)).slice(0,7); let html='<table class="mini-table"><thead><tr><th>Product</th><th>Qty</th><th>Total</th></tr></thead><tbody>';
-          top.forEach(p=>{ html+=`<tr><td><strong>${escapeHtml(p.name||'')}</strong><br><span class="badge">${p.category||''}</span></td><td>${formatNumber(p.quantity)}</td><td>${formatMYR(p.total)}</td></tr>`; });
+          top.forEach(p=>{ html+=`<tr><td><strong>${escapeHtml(p.name||'')}</strong><br><span class="badge">${p.category||''}</span></td><td>${formatNumber(p.quantity)}</td><td>${formatMYR(p.total)}</td>`; });
           html+=`</tbody></table>`; prodContainer.innerHTML=html; }
         
-        // Trend chart (re-render with current type)
         renderTrendChart(chart);
         hasData=true;
     }
@@ -369,7 +364,7 @@
     function applyCustomRange(){ const from=document.getElementById('customFromDate').value; const to=document.getElementById('customToDate').value; if(!from||!to){ showError("Select both dates"); return; } if(from>to){ showError("Invalid range"); return; } applyPreset('custom',from,to); closeDateModal(); }
     
     // Chart toggle
-    document.querySelectorAll('.toggle-btn').forEach(btn=>{ btn.addEventListener('click',()=>{ document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); currentChartType=btn.getAttribute('data-chart-type'); if(hasData){ const chartData=trendChart?.data; if(chartData){ renderTrendChart({salesByDay:{labels:chartData.labels,data:chartData.datasets[0].data}}); } } }); });
+    document.querySelectorAll('.toggle-btn').forEach(btn=>{ btn.addEventListener('click',()=>{ document.querySelectorAll('.toggle-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); currentChartType=btn.getAttribute('data-chart-type'); if(hasData){ const oldData=trendChart?.data; if(oldData) renderTrendChart({salesByDay:{labels:oldData.labels,data:oldData.datasets[0].data}}); } }); });
     
     refreshBtn.addEventListener('click',refreshDashboard);
     storeSelectorBtn.addEventListener('click',openStoreModal);
