@@ -39,7 +39,6 @@
             font-weight: 600; font-size: 0.85rem; background: transparent;
             border: none; padding: 6px 8px; cursor: pointer; white-space: nowrap;
         }
-        /* modals */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.4); backdrop-filter: blur(3px);
@@ -67,7 +66,6 @@
         .date-range-custom input { flex: 1; padding: 12px; border-radius: 30px; border: 1px solid #dce3ec; }
         .apply-custom { background: #1e4668; color: white; border: none; border-radius: 40px; padding: 10px 18px; font-weight: 600; cursor: pointer; }
         .divider { height: 1px; background: #eef2f8; margin: 16px 0; }
-        /* cards */
         .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
         .kpi-card { background: white; border-radius: 28px; padding: 16px 12px; border: 1px solid #eef2f8; }
         .kpi-label { font-size: 0.75rem; font-weight: 600; color: #6c7f9c; }
@@ -101,15 +99,26 @@
     <div id="errorMsg" style="display: none;" class="error-toast"></div>
     <div id="debugPanel" class="debug-panel">🟡 Initializing dashboard...</div>
     
-    <div class="kpi-grid" id="kpiGrid">
-        <div class="kpi-card"><div class="kpi-label">TOTAL SALES (RM)</div><div class="kpi-value skeleton"></div></div>
-        <div class="kpi-card"><div class="kpi-label">TRANSACTIONS</div><div class="kpi-value skeleton"></div></div>
-        <div class="kpi-card"><div class="kpi-label">ITEMS SOLD</div><div class="kpi-value skeleton"></div></div>
-        <div class="kpi-card"><div class="kpi-label">AVG. TICKET</div><div class="kpi-value skeleton"></div></div>
+    <div class="kpi-grid">
+        <div class="kpi-card"><div class="kpi-label">TOTAL SALES (RM)</div><div class="kpi-value" id="totalSales">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">TRANSACTIONS</div><div class="kpi-value" id="txnCount">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">ITEMS SOLD</div><div class="kpi-value" id="itemsSold">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">AVG. TICKET</div><div class="kpi-value" id="avgTicket">—</div></div>
     </div>
-    <div class="section-card"><div class="section-title">💵 Payment Breakdown</div><div class="payment-breakdown" id="paymentBreakdown">Loading...</div></div>
+    
+    <div class="section-card">
+        <div class="section-title">💵 Payment Breakdown</div>
+        <div class="payment-breakdown" id="paymentBreakdown">
+            <div class="payment-item"><div class="payment-method">Cash</div><div class="payment-amount" id="cashAmount">—</div></div>
+            <div class="payment-item"><div class="payment-method">Card</div><div class="payment-amount" id="cardAmount">—</div></div>
+            <div class="payment-item"><div class="payment-method">Alipay</div><div class="payment-amount" id="alipayAmount">—</div></div>
+            <div class="payment-item"><div class="payment-method">Other</div><div class="payment-amount" id="otherAmount">—</div></div>
+            <div class="payment-item"><div class="payment-method">Refunds</div><div class="payment-amount" id="refundAmount">—</div></div>
+        </div>
+    </div>
+    
     <div class="section-card"><div class="section-title">📈 Sales Trend</div><canvas id="trendChart"></canvas></div>
-    <div class="section-card"><div class="section-title">🏆 Top Products</div><div id="productsList"><div class="skeleton" style="height:150px;"></div></div></div>
+    <div class="section-card"><div class="section-title">🏆 Top Products</div><div id="productsList">Loading...</div></div>
     <div class="section-card"><div class="section-title">👥 Staff Performance</div><canvas id="employeeChart"></canvas><div id="employeeFallback"></div></div>
 </div>
 
@@ -276,7 +285,7 @@
         }
     }
     
-    // API fetch with timeout and detailed error
+    // API fetch with timeout
     async function fetchApi(action, store, from, to) {
         const params = new URLSearchParams({ action, store, from, to });
         if (action === 'getSalesReport') params.append('employeeId', 'all'), params.append('unsettledOnly', 'false');
@@ -285,7 +294,7 @@
         debugLog(`📡 Fetching: ${action} for ${store} (${from} → ${to})`);
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
         
         try {
             const response = await fetch(url, { method: 'GET', signal: controller.signal, mode: 'cors', cache: 'no-store' });
@@ -326,21 +335,19 @@
     function updateUI(data) {
         const { sales, chart, products, employees } = data;
         // KPI values
-        document.getElementById('totalSales').innerHTML = formatMYR(sales.totalSales);
-        document.getElementById('txnCount').innerHTML = formatNumber(sales.transactionCount);
-        document.getElementById('itemsSold').innerHTML = formatNumber(sales.totalItems);
+        document.getElementById('totalSales').innerText = formatMYR(sales.totalSales);
+        document.getElementById('txnCount').innerText = formatNumber(sales.transactionCount);
+        document.getElementById('itemsSold').innerText = formatNumber(sales.totalItems);
         const avg = sales.transactionCount ? sales.totalSales / sales.transactionCount : 0;
-        document.getElementById('avgTicket').innerHTML = formatMYR(avg);
+        document.getElementById('avgTicket').innerText = formatMYR(avg);
         
-        // Payment breakdown
-        const paymentHtml = `
-            <div class="payment-item"><div class="payment-method">Cash</div><div class="payment-amount" id="cashAmount">${formatMYR(sales.cashTotal)}</div></div>
-            <div class="payment-item"><div class="payment-method">Card</div><div class="payment-amount" id="cardAmount">${formatMYR(sales.cardTotal)}</div></div>
-            <div class="payment-item"><div class="payment-method">Alipay</div><div class="payment-amount" id="alipayAmount">${formatMYR(sales.alipayTotal)}</div></div>
-            <div class="payment-item"><div class="payment-method">Other</div><div class="payment-amount" id="otherAmount">${formatMYR(sales.otherTotal)}</div></div>
-            <div class="payment-item"><div class="payment-method">Refunds</div><div class="payment-amount" id="refundAmount">${formatMYR((sales.refundTotal||0) * -1)}</div></div>
-        `;
-        document.getElementById('paymentBreakdown').innerHTML = paymentHtml;
+        // Payment breakdown (update existing elements)
+        document.getElementById('cashAmount').innerText = formatMYR(sales.cashTotal);
+        document.getElementById('cardAmount').innerText = formatMYR(sales.cardTotal);
+        document.getElementById('alipayAmount').innerText = formatMYR(sales.alipayTotal);
+        document.getElementById('otherAmount').innerText = formatMYR(sales.otherTotal);
+        const refundPos = (sales.refundTotal || 0) * -1;
+        document.getElementById('refundAmount').innerText = formatMYR(refundPos > 0 ? refundPos : 0);
         
         // Trend chart
         const ctx = document.getElementById('trendChart').getContext('2d');
@@ -388,7 +395,11 @@
         document.getElementById('txnCount').innerHTML = '<div class="skeleton"></div>';
         document.getElementById('itemsSold').innerHTML = '<div class="skeleton"></div>';
         document.getElementById('avgTicket').innerHTML = '<div class="skeleton"></div>';
-        document.getElementById('paymentBreakdown').innerHTML = '<div class="skeleton" style="height:80px;"></div>';
+        document.getElementById('cashAmount').innerHTML = '—';
+        document.getElementById('cardAmount').innerHTML = '—';
+        document.getElementById('alipayAmount').innerHTML = '—';
+        document.getElementById('otherAmount').innerHTML = '—';
+        document.getElementById('refundAmount').innerHTML = '—';
         document.getElementById('productsList').innerHTML = '<div class="skeleton" style="height:150px;"></div>';
         document.getElementById('employeeFallback').innerHTML = '';
         if (trendChart) trendChart.destroy();
