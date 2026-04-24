@@ -2,247 +2,89 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
-    <title>Sales Dashboard · Fast & Lite</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Sales Dashboard · Fast & Debug</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f4f6fa;
-            padding: 0 0 40px 0;
-            color: #1a2634;
-        }
-        .dashboard-container {
-            max-width: 580px;
-            margin: 0 auto;
-            padding: 0 16px;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f4f6fa; padding: 0 0 40px; color: #1a2634; }
+        .dashboard-container { max-width: 580px; margin: 0 auto; padding: 0 16px; }
         .app-header {
-            background: white;
-            padding: 10px 16px;
-            border-bottom: 1px solid #eef2f8;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            backdrop-filter: blur(8px);
-            background: rgba(255,255,255,0.96);
-            margin-bottom: 20px;
+            background: white; padding: 10px 16px; border-bottom: 1px solid #eef2f8;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 10; backdrop-filter: blur(8px);
+            background: rgba(255,255,255,0.96); margin-bottom: 20px;
         }
         .header-left { width: 44px; }
         .refresh-icon, .store-icon-btn {
-            background: #f0f3f9;
-            border: none;
-            width: 44px;
-            height: 44px;
-            border-radius: 30px;
-            font-size: 1.4rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: #f0f3f9; border: none; width: 44px; height: 44px;
+            border-radius: 30px; font-size: 1.4rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
             transition: all 0.2s;
         }
-        .refresh-icon:active, .store-icon-btn:active {
-            background: #e0e6f0;
-            transform: scale(0.96);
-        }
+        .refresh-icon:active, .store-icon-btn:active { background: #e0e6f0; transform: scale(0.96); }
         .date-control {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: #f0f3f9;
-            border-radius: 60px;
-            padding: 2px 8px;
+            display: flex; align-items: center; gap: 8px;
+            background: #f0f3f9; border-radius: 60px; padding: 2px 8px;
         }
         .arrow-btn {
-            background: transparent;
-            border: none;
-            font-size: 1.2rem;
-            cursor: pointer;
-            width: 32px;
-            height: 32px;
-            border-radius: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.1s;
+            background: transparent; border: none; font-size: 1.2rem;
+            cursor: pointer; width: 32px; height: 32px; border-radius: 30px;
+            display: flex; align-items: center; justify-content: center;
             color: #2c3e66;
         }
         .arrow-btn:active { background: #dce3ec; }
         .date-label {
-            font-weight: 600;
-            font-size: 0.85rem;
-            background: transparent;
-            border: none;
-            padding: 6px 8px;
-            cursor: pointer;
-            white-space: nowrap;
+            font-weight: 600; font-size: 0.85rem; background: transparent;
+            border: none; padding: 6px 8px; cursor: pointer; white-space: nowrap;
         }
-        /* modal styles (unchanged) */
+        /* modals */
         .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.4);
-            backdrop-filter: blur(3px);
-            z-index: 1000;
-            display: flex;
-            align-items: flex-end;
-            justify-content: center;
-            visibility: hidden;
-            opacity: 0;
-            transition: 0.2s;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(3px);
+            z-index: 1000; display: flex; align-items: flex-end; justify-content: center;
+            visibility: hidden; opacity: 0; transition: 0.2s;
         }
         .modal-overlay.active { visibility: visible; opacity: 1; }
         .modal-bottom {
-            background: white;
-            width: 100%;
-            max-width: 520px;
-            border-radius: 32px 32px 0 0;
-            padding: 24px 20px 32px;
-            transform: translateY(100%);
-            transition: transform 0.25s ease-out;
+            background: white; width: 100%; max-width: 520px;
+            border-radius: 32px 32px 0 0; padding: 24px 20px 32px;
+            transform: translateY(100%); transition: transform 0.25s ease-out;
         }
         .active .modal-bottom { transform: translateY(0); }
-        .modal-title {
-            font-weight: 700;
-            font-size: 1.2rem;
-            margin-bottom: 20px;
-            text-align: center;
-        }
+        .modal-title { font-weight: 700; font-size: 1.2rem; margin-bottom: 20px; text-align: center; }
         .store-option, .preset-option {
-            background: #f8fafd;
-            padding: 14px 18px;
-            margin-bottom: 10px;
-            border-radius: 60px;
-            font-weight: 500;
-            text-align: center;
-            cursor: pointer;
-            border: 1px solid #eef2f8;
+            background: #f8fafd; padding: 14px 18px; margin-bottom: 10px;
+            border-radius: 60px; font-weight: 500; text-align: center;
+            cursor: pointer; border: 1px solid #eef2f8;
         }
         .close-modal {
-            margin-top: 20px;
-            background: none;
-            border: 1px solid #cfdfed;
-            padding: 12px;
-            border-radius: 60px;
-            width: 100%;
-            cursor: pointer;
+            margin-top: 20px; background: none; border: 1px solid #cfdfed;
+            padding: 12px; border-radius: 60px; width: 100%; cursor: pointer;
         }
-        .date-range-custom {
-            margin-top: 16px;
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-        .date-range-custom input {
-            flex: 1;
-            padding: 12px;
-            border-radius: 30px;
-            border: 1px solid #dce3ec;
-        }
-        .apply-custom {
-            background: #1e4668;
-            color: white;
-            border: none;
-            border-radius: 40px;
-            padding: 10px 18px;
-            font-weight: 600;
-            cursor: pointer;
-        }
+        .date-range-custom { margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap; }
+        .date-range-custom input { flex: 1; padding: 12px; border-radius: 30px; border: 1px solid #dce3ec; }
+        .apply-custom { background: #1e4668; color: white; border: none; border-radius: 40px; padding: 10px 18px; font-weight: 600; cursor: pointer; }
         .divider { height: 1px; background: #eef2f8; margin: 16px 0; }
-        /* KPI & cards */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-        .kpi-card {
-            background: white;
-            border-radius: 28px;
-            padding: 16px 12px;
-            border: 1px solid #eef2f8;
-            transition: all 0.1s;
-        }
-        .kpi-label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #6c7f9c;
-        }
-        .kpi-value {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: #1a2c42;
-            margin-top: 8px;
-        }
-        .payment-breakdown {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 12px;
-        }
-        .payment-item {
-            flex: 1;
-            text-align: center;
-            background: #f9fbfd;
-            border-radius: 24px;
-            padding: 10px 6px;
-        }
-        .section-card {
-            background: white;
-            border-radius: 28px;
-            padding: 18px 16px;
-            margin-bottom: 24px;
-            border: 1px solid #eef2f8;
-        }
-        .section-title {
-            font-weight: 700;
-            font-size: 1.1rem;
-            margin-bottom: 16px;
-            border-left: 4px solid #2b6e9e;
-            padding-left: 12px;
-        }
-        .mini-table {
-            width: 100%;
-            font-size: 0.8rem;
-            border-collapse: collapse;
-        }
+        /* cards */
+        .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; }
+        .kpi-card { background: white; border-radius: 28px; padding: 16px 12px; border: 1px solid #eef2f8; }
+        .kpi-label { font-size: 0.75rem; font-weight: 600; color: #6c7f9c; }
+        .kpi-value { font-size: 1.8rem; font-weight: 800; color: #1a2c42; margin-top: 8px; word-break: break-word; }
+        .payment-breakdown { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+        .payment-item { flex: 1; text-align: center; background: #f9fbfd; border-radius: 24px; padding: 10px 6px; }
+        .section-card { background: white; border-radius: 28px; padding: 18px 16px; margin-bottom: 24px; border: 1px solid #eef2f8; }
+        .section-title { font-weight: 700; font-size: 1.1rem; margin-bottom: 16px; border-left: 4px solid #2b6e9e; padding-left: 12px; }
+        .mini-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; }
         .mini-table th, .mini-table td { padding: 12px 6px; text-align: left; border-bottom: 1px solid #ecf0f5; }
         .badge { background: #eef2ff; border-radius: 30px; padding: 2px 8px; font-size: 0.7rem; }
-        .error-toast {
-            background: #fee2e2;
-            border-radius: 60px;
-            padding: 10px 16px;
-            margin-bottom: 16px;
-            color: #b91c1c;
-            font-size: 0.8rem;
-            text-align: center;
-        }
-        .skeleton {
-            background: linear-gradient(90deg, #f0f2f5 25%, #e9ecef 50%, #f0f2f5 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.2s infinite;
-            border-radius: 12px;
-        }
+        .error-toast { background: #fee2e2; border-radius: 24px; padding: 12px 16px; margin-bottom: 16px; color: #b91c1c; font-size: 0.8rem; text-align: left; word-break: break-word; border-left: 4px solid #b91c1c; }
+        .skeleton { background: linear-gradient(90deg, #f0f2f5 25%, #e9ecef 50%, #f0f2f5 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; border-radius: 12px; height: 40px; width: 100%; margin-top: 8px; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        .kpi-skeleton { height: 64px; width: 100%; }
         canvas { max-height: 220px; width: 100%; }
-        @media (max-width: 480px) {
-            .kpi-value { font-size: 1.5rem; }
-            .date-label { font-size: 0.7rem; }
-        }
+        .debug-panel { background: #1e1e2f; color: #f0f0f0; padding: 12px; border-radius: 20px; font-family: monospace; font-size: 11px; margin-bottom: 16px; max-height: 200px; overflow: auto; white-space: pre-wrap; }
+        @media (max-width: 480px) { .kpi-value { font-size: 1.5rem; } .date-label { font-size: 0.7rem; } }
     </style>
 </head>
 <body>
@@ -257,22 +99,27 @@
 </div>
 <div class="dashboard-container">
     <div id="errorMsg" style="display: none;" class="error-toast"></div>
+    <div id="debugPanel" class="debug-panel">🟡 Initializing dashboard...</div>
+    
     <div class="kpi-grid" id="kpiGrid">
-        <div class="kpi-card"><div class="kpi-label">TOTAL SALES (RM)</div><div class="kpi-value skeleton" style="height: 40px; width: 80%; margin-top: 8px;"></div></div>
-        <div class="kpi-card"><div class="kpi-label">TRANSACTIONS</div><div class="kpi-value skeleton" style="height: 40px; width: 60%;"></div></div>
-        <div class="kpi-card"><div class="kpi-label">ITEMS SOLD</div><div class="kpi-value skeleton" style="height: 40px; width: 70%;"></div></div>
-        <div class="kpi-card"><div class="kpi-label">AVG. TICKET</div><div class="kpi-value skeleton" style="height: 40px; width: 65%;"></div></div>
+        <div class="kpi-card"><div class="kpi-label">TOTAL SALES (RM)</div><div class="kpi-value skeleton"></div></div>
+        <div class="kpi-card"><div class="kpi-label">TRANSACTIONS</div><div class="kpi-value skeleton"></div></div>
+        <div class="kpi-card"><div class="kpi-label">ITEMS SOLD</div><div class="kpi-value skeleton"></div></div>
+        <div class="kpi-card"><div class="kpi-label">AVG. TICKET</div><div class="kpi-value skeleton"></div></div>
     </div>
-    <div class="section-card"><div class="section-title">💵 Payment Breakdown</div><div class="payment-breakdown" id="paymentBreakdown">...</div></div>
+    <div class="section-card"><div class="section-title">💵 Payment Breakdown</div><div class="payment-breakdown" id="paymentBreakdown">Loading...</div></div>
     <div class="section-card"><div class="section-title">📈 Sales Trend</div><canvas id="trendChart"></canvas></div>
-    <div class="section-card"><div class="section-title">🏆 Top Products</div><div id="productsList"><div class="skeleton" style="height: 200px;"></div></div></div>
+    <div class="section-card"><div class="section-title">🏆 Top Products</div><div id="productsList"><div class="skeleton" style="height:150px;"></div></div></div>
     <div class="section-card"><div class="section-title">👥 Staff Performance</div><canvas id="employeeChart"></canvas><div id="employeeFallback"></div></div>
 </div>
 
-<!-- Modals (store + date) -->
+<!-- Store Modal -->
 <div id="storeModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">🏬 Select Store</div>
-    <div class="store-option" data-store="queens">Queensbay Mall</div><div class="store-option" data-store="sunshine">Sunshine Square</div>
-    <div class="store-option" data-store="gurney_paragon">Gurney Paragon</div><button class="close-modal" id="closeStoreModal">Cancel</button></div></div>
+    <div class="store-option" data-store="queens">Queensbay Mall</div>
+    <div class="store-option" data-store="sunshine">Sunshine Square</div>
+    <div class="store-option" data-store="gurney_paragon">Gurney Paragon</div>
+    <button class="close-modal" id="closeStoreModal">Cancel</button></div></div>
+<!-- Date Modal -->
 <div id="dateModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">📅 Select Range</div>
     <div class="preset-option" data-preset="today">Today</div><div class="preset-option" data-preset="week">This Week</div>
     <div class="preset-option" data-preset="month">This Month</div><div class="preset-option" data-preset="year">This Year</div>
@@ -283,7 +130,15 @@
 <script>
     // ========== CONFIG ==========
     const BACKEND_URL = "https://script.google.com/macros/s/AKfycbzfrWUxI6MiAc05CRNV5IRlTXg7pJiOqlMBCGGQISBcl1FFtkmfUwMmflEhm6tyCAr6qg/exec";
-    const CACHE_TTL_MS = 30 * 1000; // 30 seconds cache for fast interaction
+    
+    // Debug logger
+    const debugPanel = document.getElementById('debugPanel');
+    function debugLog(msg) { 
+        const time = new Date().toLocaleTimeString();
+        debugPanel.innerHTML = `[${time}] ${msg}\n` + debugPanel.innerHTML;
+        if (debugPanel.innerHTML.length > 2000) debugPanel.innerHTML = debugPanel.innerHTML.slice(0, 1800);
+        console.log(msg);
+    }
     
     // DOM elements
     const refreshBtn = document.getElementById('headerRefreshBtn');
@@ -297,28 +152,17 @@
     // State
     let currentStore = "queens";
     let currentFrom = "", currentTo = "";
-    let currentPresetType = "day";    // day, week, month, year, custom
+    let currentPresetType = "day";
     let currentDayDate = null;
-    let pendingRequest = false;
-    let debounceTimer = null;
+    let refreshInProgress = false;
+    let trendChart = null, employeeChart = null;
     
-    // Simple in-memory cache
-    const cache = new Map();
-    function getCacheKey(action, store, from, to) { return `${action}|${store}|${from}|${to}`; }
-    function getCached(action, store, from, to) {
-        const key = getCacheKey(action, store, from, to);
-        const entry = cache.get(key);
-        if (entry && (Date.now() - entry.timestamp) < CACHE_TTL_MS) return entry.data;
-        return null;
-    }
-    function setCache(action, store, from, to, data) {
-        const key = getCacheKey(action, store, from, to);
-        cache.set(key, { data, timestamp: Date.now() });
-    }
-    
-    // Helper dates
+    // Helper: format YYYY-MM-DD
     function formatYMD(date) {
-        return date.toISOString().split('T')[0];
+        let y = date.getFullYear();
+        let m = String(date.getMonth() + 1).padStart(2, '0');
+        let d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
     }
     function getWeekStart(date) {
         let d = new Date(date);
@@ -328,15 +172,14 @@
         return d;
     }
     
-    // Apply preset (fast, no fetch yet)
+    // Apply preset (update state & refresh)
     function applyPreset(preset, customFrom = null, customTo = null) {
         const today = new Date(); today.setHours(0,0,0,0);
         if (preset === 'custom' && customFrom && customTo) {
             currentPresetType = 'custom';
             currentFrom = customFrom;
             currentTo = customTo;
-            currentPresetLabel = `${customFrom} → ${customTo}`;
-            dateRangeLabelSpan.innerText = currentPresetLabel;
+            dateRangeLabelSpan.innerText = `${customFrom} → ${customTo}`;
             refreshDashboard();
             return;
         }
@@ -380,11 +223,11 @@
         }
     }
     
-    // Arrow shift (optimistic UI update)
+    // Arrow shift
     function shiftDateRange(direction) {
-        if (pendingRequest) return;
+        if (refreshInProgress) return;
         const delta = direction === 'left' ? -1 : 1;
-        if (currentPresetType === 'custom') { showError("Custom range cannot be shifted. Select preset."); return; }
+        if (currentPresetType === 'custom') { showError("Custom range cannot be shifted. Select a preset."); return; }
         if (currentPresetType === 'day') {
             if (!currentDayDate) currentDayDate = new Date();
             let newDate = new Date(currentDayDate);
@@ -433,110 +276,140 @@
         }
     }
     
-    // API with cache
+    // API fetch with timeout and detailed error
     async function fetchApi(action, store, from, to) {
-        const cached = getCached(action, store, from, to);
-        if (cached) return cached;
-        const params = { action, store, from, to };
-        if (action === 'getSalesReport') params.employeeId = 'all', params.unsettledOnly = 'false';
-        if (action === 'getSalesChartData' || action === 'getProductSalesReport' || action === 'getEmployeeSalesData') params.employeeId = 'all';
-        const urlParams = new URLSearchParams(params);
-        const url = `${BACKEND_URL}?${urlParams.toString()}`;
-        const res = await fetch(url, { method: 'GET', cache: 'no-store' });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        if (data && data.success === false) throw new Error(data.error || "API error");
-        setCache(action, store, from, to, data);
-        return data;
+        const params = new URLSearchParams({ action, store, from, to });
+        if (action === 'getSalesReport') params.append('employeeId', 'all'), params.append('unsettledOnly', 'false');
+        if (action === 'getSalesChartData' || action === 'getProductSalesReport' || action === 'getEmployeeSalesData') params.append('employeeId', 'all');
+        const url = `${BACKEND_URL}?${params.toString()}`;
+        debugLog(`📡 Fetching: ${action} for ${store} (${from} → ${to})`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+        
+        try {
+            const response = await fetch(url, { method: 'GET', signal: controller.signal, mode: 'cors', cache: 'no-store' });
+            clearTimeout(timeoutId);
+            if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            const data = await response.json();
+            if (data && data.success === false) throw new Error(data.error || "API returned error");
+            debugLog(`✅ ${action} success`);
+            return data;
+        } catch (err) {
+            clearTimeout(timeoutId);
+            debugLog(`❌ ${action} failed: ${err.message}`);
+            throw err;
+        }
     }
     
-    // Optimized parallel fetch with caching
     async function fetchAllData(store, from, to) {
-        const [sales, chart, products, employees] = await Promise.all([
+        const results = await Promise.allSettled([
             fetchApi('getSalesReport', store, from, to),
             fetchApi('getSalesChartData', store, from, to),
             fetchApi('getProductSalesReport', store, from, to),
             fetchApi('getEmployeeSalesData', store, from, to)
         ]);
-        return { sales, chart, products, employees };
+        const [salesResult, chartResult, productsResult, empResult] = results;
+        if (salesResult.status === 'rejected') throw new Error(`Sales report failed: ${salesResult.reason.message}`);
+        return {
+            sales: salesResult.value,
+            chart: chartResult.status === 'fulfilled' ? chartResult.value : { success: true, salesByDay: { labels: [], data: [] } },
+            products: productsResult.status === 'fulfilled' ? productsResult.value : { products: [] },
+            employees: empResult.status === 'fulfilled' ? empResult.value : { labels: [], data: [] }
+        };
     }
     
-    // UI update helpers (fast direct DOM)
+    // UI update functions
     function formatMYR(v) { return `RM ${(v || 0).toFixed(2)}`; }
     function formatNumber(v) { return (parseInt(v) || 0).toLocaleString(); }
     
-    let trendChart = null, employeeChart = null;
     function updateUI(data) {
         const { sales, chart, products, employees } = data;
-        // KPIs
+        // KPI values
         document.getElementById('totalSales').innerHTML = formatMYR(sales.totalSales);
         document.getElementById('txnCount').innerHTML = formatNumber(sales.transactionCount);
         document.getElementById('itemsSold').innerHTML = formatNumber(sales.totalItems);
         const avg = sales.transactionCount ? sales.totalSales / sales.transactionCount : 0;
         document.getElementById('avgTicket').innerHTML = formatMYR(avg);
-        document.getElementById('cashAmount').innerHTML = formatMYR(sales.cashTotal);
-        document.getElementById('cardAmount').innerHTML = formatMYR(sales.cardTotal);
-        document.getElementById('alipayAmount').innerHTML = formatMYR(sales.alipayTotal);
-        document.getElementById('otherAmount').innerHTML = formatMYR(sales.otherTotal);
-        const refundPos = (sales.refundTotal || 0) * -1;
-        document.getElementById('refundAmount').innerHTML = formatMYR(refundPos > 0 ? refundPos : 0);
+        
+        // Payment breakdown
+        const paymentHtml = `
+            <div class="payment-item"><div class="payment-method">Cash</div><div class="payment-amount" id="cashAmount">${formatMYR(sales.cashTotal)}</div></div>
+            <div class="payment-item"><div class="payment-method">Card</div><div class="payment-amount" id="cardAmount">${formatMYR(sales.cardTotal)}</div></div>
+            <div class="payment-item"><div class="payment-method">Alipay</div><div class="payment-amount" id="alipayAmount">${formatMYR(sales.alipayTotal)}</div></div>
+            <div class="payment-item"><div class="payment-method">Other</div><div class="payment-amount" id="otherAmount">${formatMYR(sales.otherTotal)}</div></div>
+            <div class="payment-item"><div class="payment-method">Refunds</div><div class="payment-amount" id="refundAmount">${formatMYR((sales.refundTotal||0) * -1)}</div></div>
+        `;
+        document.getElementById('paymentBreakdown').innerHTML = paymentHtml;
+        
         // Trend chart
         const ctx = document.getElementById('trendChart').getContext('2d');
         if (trendChart) trendChart.destroy();
         let labels = [], values = [];
         if (chart.type === 'hourly' && chart.hourly) { labels = chart.hourly.labels; values = chart.hourly.data; }
         else if (chart.salesByDay) { labels = chart.salesByDay.labels; values = chart.salesByDay.data; }
-        trendChart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: 'Sales (RM)', data: values, borderColor: '#2b6e9e', backgroundColor: 'rgba(43,110,158,0.05)', tension: 0.3, fill: true, pointRadius: 2 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `RM ${ctx.raw.toFixed(2)}` } } } } });
-        // Products table
+        trendChart = new Chart(ctx, {
+            type: 'line', data: { labels, datasets: [{ label: 'Sales (RM)', data: values, borderColor: '#2b6e9e', backgroundColor: 'rgba(43,110,158,0.05)', tension: 0.3, fill: true, pointRadius: 2 }] },
+            options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `RM ${ctx.raw.toFixed(2)}` } } } }
+        });
+        
+        // Top products
         const prodContainer = document.getElementById('productsList');
-        if (!products.products?.length) prodContainer.innerHTML = '<div class="loader">No product sales</div>';
-        else {
+        if (!products.products || products.products.length === 0) {
+            prodContainer.innerHTML = '<div class="loader">No product sales in this period</div>';
+        } else {
             const top = [...products.products].sort((a,b)=> (b.total||0)-(a.total||0)).slice(0,7);
             let html = `<table class="mini-table"><thead><tr><th>Product</th><th>Qty</th><th>Total</th></tr></thead><tbody>`;
-            top.forEach(p => { html += `<tr><td><strong>${escapeHtml(p.name||'')}</strong><br><span class="badge">${p.category||''}</span></td><td>${formatNumber(p.quantity)}</td><td>${formatMYR(p.total)}</td></tr>`; });
+            top.forEach(p => {
+                html += `<tr><td><strong>${escapeHtml(p.name||'')}</strong><br><span class="badge">${p.category||''}</span></td><td>${formatNumber(p.quantity)}</td><td>${formatMYR(p.total)}</td></tr>`;
+            });
             html += `</tbody></table>`;
             prodContainer.innerHTML = html;
         }
+        
         // Employee chart
         const empCtx = document.getElementById('employeeChart').getContext('2d');
         const fallback = document.getElementById('employeeFallback');
         if (employeeChart) employeeChart.destroy();
-        if (!employees.labels?.length) { fallback.innerText = 'No staff data'; employeeChart = new Chart(empCtx, { type: 'bar', data: { labels: [], datasets: [] } }); }
-        else {
+        if (!employees.labels || employees.labels.length === 0) {
+            fallback.innerText = 'No staff sales data';
+            employeeChart = new Chart(empCtx, { type: 'bar', data: { labels: [], datasets: [] } });
+        } else {
             fallback.innerText = '';
-            employeeChart = new Chart(empCtx, { type: 'bar', data: { labels: employees.labels, datasets: [{ label: 'Sales (RM)', data: employees.data.map(v=>parseFloat(v)), backgroundColor: '#5f8bb3', borderRadius: 8 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `RM ${ctx.raw.toFixed(2)}` } } } } });
+            employeeChart = new Chart(empCtx, {
+                type: 'bar', data: { labels: employees.labels, datasets: [{ label: 'Sales (RM)', data: employees.data.map(v=>parseFloat(v)), backgroundColor: '#5f8bb3', borderRadius: 8 }] },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `RM ${ctx.raw.toFixed(2)}` } } } }
+            });
         }
     }
     
-    function showSkeleton(show) {
-        if (!show) return;
-        document.getElementById('totalSales').innerHTML = '<div class="skeleton" style="height:40px; width:80%"></div>';
-        document.getElementById('txnCount').innerHTML = '<div class="skeleton" style="height:40px; width:60%"></div>';
-        document.getElementById('itemsSold').innerHTML = '<div class="skeleton" style="height:40px; width:70%"></div>';
-        document.getElementById('avgTicket').innerHTML = '<div class="skeleton" style="height:40px; width:65%"></div>';
-        document.getElementById('cashAmount').innerHTML = '—';
-        document.getElementById('cardAmount').innerHTML = '—';
-        document.getElementById('alipayAmount').innerHTML = '—';
-        document.getElementById('otherAmount').innerHTML = '—';
-        document.getElementById('refundAmount').innerHTML = '—';
-        document.getElementById('productsList').innerHTML = '<div class="skeleton" style="height:200px;"></div>';
+    function showSkeleton() {
+        document.getElementById('totalSales').innerHTML = '<div class="skeleton"></div>';
+        document.getElementById('txnCount').innerHTML = '<div class="skeleton"></div>';
+        document.getElementById('itemsSold').innerHTML = '<div class="skeleton"></div>';
+        document.getElementById('avgTicket').innerHTML = '<div class="skeleton"></div>';
+        document.getElementById('paymentBreakdown').innerHTML = '<div class="skeleton" style="height:80px;"></div>';
+        document.getElementById('productsList').innerHTML = '<div class="skeleton" style="height:150px;"></div>';
+        document.getElementById('employeeFallback').innerHTML = '';
         if (trendChart) trendChart.destroy();
         if (employeeChart) employeeChart.destroy();
     }
     
-    let refreshInProgress = false;
     async function refreshDashboard() {
-        if (refreshInProgress) return;
-        if (!currentFrom || !currentTo) return;
+        if (refreshInProgress) { debugLog("⏳ Refresh already in progress, skipping"); return; }
+        if (!currentFrom || !currentTo) { debugLog("⚠️ No date range set"); return; }
         refreshInProgress = true;
         refreshBtn.innerText = '⌛';
-        showSkeleton(true);
+        showSkeleton();
+        errorDiv.style.display = 'none';
+        debugLog(`🔄 Refreshing: store=${currentStore}, from=${currentFrom}, to=${currentTo}`);
+        
         try {
             const data = await fetchAllData(currentStore, currentFrom, currentTo);
             updateUI(data);
-            errorDiv.style.display = 'none';
+            debugLog("✅ Dashboard updated successfully");
         } catch (err) {
-            console.error(err);
+            debugLog(`❌ Critical error: ${err.message}`);
             showError(err.message);
         } finally {
             refreshInProgress = false;
@@ -544,17 +417,11 @@
         }
     }
     
-    // Debounced refresh for rapid arrow clicks
-    function debouncedRefresh() {
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => refreshDashboard(), 50);
+    function showError(msg) {
+        errorDiv.innerText = `⚠️ ${msg}\n\n💡 Tip: If you see CORS errors, you must serve this HTML from the same Apps Script project as a Web App.`;
+        errorDiv.style.display = 'block';
     }
     
-    function showError(msg) {
-        errorDiv.innerText = msg;
-        errorDiv.style.display = 'block';
-        setTimeout(() => errorDiv.style.display = 'none', 3000);
-    }
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => m==='&'?'&amp;':m==='<'?'&lt;':'&gt;'); }
     
     // Modal handlers
@@ -578,12 +445,12 @@
         closeDateModal();
     }
     
-    // Event binding (with passive true for touch)
+    // Event listeners
     refreshBtn.addEventListener('click', refreshDashboard);
     storeIconBtn.addEventListener('click', openStoreModal);
     dateTriggerBtn.addEventListener('click', openDateModal);
-    leftArrow.addEventListener('click', () => { shiftDateRange('left'); debouncedRefresh(); });
-    rightArrow.addEventListener('click', () => { shiftDateRange('right'); debouncedRefresh(); });
+    leftArrow.addEventListener('click', () => { shiftDateRange('left'); setTimeout(() => refreshDashboard(), 50); });
+    rightArrow.addEventListener('click', () => { shiftDateRange('right'); setTimeout(() => refreshDashboard(), 50); });
     document.getElementById('closeStoreModal').addEventListener('click', closeStoreModal);
     document.getElementById('closeDateModal').addEventListener('click', closeDateModal);
     document.querySelectorAll('#storeModal .store-option').forEach(opt => opt.addEventListener('click', () => selectStore(opt.dataset.store)));
@@ -596,13 +463,14 @@
     storeModal.addEventListener('click', (e) => { if(e.target === storeModal) closeStoreModal(); });
     dateModal.addEventListener('click', (e) => { if(e.target === dateModal) closeDateModal(); });
     
-    // Initialize: today's date (single day)
+    // Initialize
     const today = new Date(); today.setHours(0,0,0,0);
     currentPresetType = 'day';
     currentDayDate = new Date(today);
     currentFrom = formatYMD(currentDayDate);
     currentTo = formatYMD(currentDayDate);
     dateRangeLabelSpan.innerText = formatYMD(currentDayDate);
+    debugLog("🚀 Dashboard initialized. Starting first load...");
     refreshDashboard();
 </script>
 </body>
