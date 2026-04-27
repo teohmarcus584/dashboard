@@ -97,6 +97,7 @@
         .divider { height: 1px; background: #eef2f8; margin: 20px 0; }
         .product-table-container { max-height: 420px; overflow-y: auto; border-radius: 24px; }
         @media (max-width: 640px) { .kpi-value { font-size: 1.8rem; } .date-trigger-btn { padding: 8px 16px; font-size: 0.85rem; } .store-name { max-width: 110px; } }
+        .date-label-today { font-weight: 700; color: #2b6e9e; }
     </style>
 </head>
 <body>
@@ -130,7 +131,6 @@
 
 <script>
     (function() {
-        // Wait for DOM to be fully loaded to avoid any reference errors
         document.addEventListener('DOMContentLoaded', function() {
             // ----- DOM elements -----
             const refreshBtn = document.getElementById('headerRefreshBtn');
@@ -142,7 +142,6 @@
             const dateRangeLabelSpan = document.getElementById('dateRangeLabel');
             const errorDiv = document.getElementById('errorMsg');
             
-            // Guard against missing elements (just in case)
             if (!refreshBtn || !leftArrowBtn || !rightArrowBtn || !dateTriggerBtn || !storeSelectorBtn) {
                 console.error("Critical DOM elements missing");
                 return;
@@ -160,7 +159,7 @@
             let currentStoreDisplay = "Queensbay Mall";
             let currentFrom = "", currentTo = "";
             let currentPresetType = "day";
-            let currentDayDate = null;
+            let currentDayDate = null;   // stored as Date object (local midnight)
             let lastLoadedFrom = "", lastLoadedTo = "", lastLoadedStore = "";
             let hasData = false;
             let refreshInProgress = false;
@@ -168,24 +167,73 @@
             let initialPreloadDone = false;
             let currentChartType = "line";
             
-            // Helper: today's YMD
+            // Helper: get today's YYYY-MM-DD in local time (string comparison safe)
             function getTodayYMD() {
                 const d = new Date();
-                d.setHours(0,0,0,0);
-                return d.toISOString().split('T')[0];
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
             }
             const TODAY_YMD = getTodayYMD();
-            const TODAY_OBJ = new Date(TODAY_YMD);
             
-            function formatYMD(d) { return d.toISOString().split('T')[0]; }
-            function getWeekStart(d) { let nd = new Date(d); const day = nd.getDay(); const diff = (day === 0 ? -6 : 1 - day); nd.setDate(nd.getDate() + diff); return nd; }
+            // Format a Date object (local) to YYYY-MM-DD
+            function formatYMD(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            
+            // Parse YYYY-MM-DD to local Date at midnight
+            function parseYMD(ymd) {
+                const [year, month, day] = ymd.split('-').map(Number);
+                return new Date(year, month - 1, day);
+            }
+            
+            function getWeekStart(d) { 
+                let nd = new Date(d); 
+                const day = nd.getDay(); 
+                const diff = (day === 0 ? -6 : 1 - day); 
+                nd.setDate(nd.getDate() + diff); 
+                return nd; 
+            }
+            
             function formatMYR(v) { return `RM ${(v || 0).toFixed(2)}`; }
             function formatNumber(v) { return (parseInt(v) || 0).toLocaleString(); }
             function getCacheKey(a,s,f,t) { return `${a}|${s}|${f}|${t}`; }
             function getCached(a,s,f,t) { const e = cache.get(getCacheKey(a,s,f,t)); if (e && (Date.now() - e.timestamp) < CACHE_TTL) return e.data; return null; }
             function setCache(a,s,f,t,d) { cache.set(getCacheKey(a,s,f,t), { data: d, timestamp: Date.now() }); }
             
-            function isFutureDate(ymd) { return new Date(ymd) > TODAY_OBJ; }
+            // Compare YYYY-MM-DD strings directly (lexicographic works because of zero padding)
+            function isFutureDate(ymd) {
+                return ymd > TODAY_YMD;
+            }
+            function isTodayDate(ymd) {
+                return ymd === TODAY_YMD;
+            }
+            
+            // Update the date label intelligently: show "Today" for current day, otherwise formatted
+            function updateDateLabel() {
+                if (currentPresetType === 'custom') {
+                    dateRangeLabelSpan.innerText = `${currentFrom} → ${currentTo}`;
+                } else if (currentPresetType === 'day') {
+                    if (isTodayDate(currentFrom)) {
+                        dateRangeLabelSpan.innerText = "Today";
+                    } else {
+                        dateRangeLabelSpan.innerText = currentFrom;
+                    }
+                } else if (currentPresetType === 'week') {
+                    dateRangeLabelSpan.innerText = `Week of ${currentFrom}`;
+                } else if (currentPresetType === 'month') {
+                    try {
+                        const startDate = parseYMD(currentFrom);
+                        dateRangeLabelSpan.innerText = startDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+                    } catch(e) { dateRangeLabelSpan.innerText = currentFrom; }
+                } else if (currentPresetType === 'year') {
+                    dateRangeLabelSpan.innerText = `${parseYMD(currentFrom).getFullYear()}`;
+                }
+            }
             
             function getAdjacentRange(dir) {
                 const delta = dir === 'next' ? 1 : -1;
@@ -196,7 +244,7 @@
                     return { from: formatYMD(nd), to: formatYMD(nd) };
                 }
                 if (currentPresetType === 'week') {
-                    let start = new Date(currentFrom);
+                    let start = parseYMD(currentFrom);
                     if (isNaN(start)) start = getWeekStart(new Date());
                     let ns = new Date(start);
                     ns.setDate(start.getDate() + delta * 7);
@@ -205,14 +253,14 @@
                     return { from: formatYMD(ns), to: formatYMD(ne) };
                 }
                 if (currentPresetType === 'month') {
-                    let start = currentFrom ? new Date(currentFrom) : new Date();
+                    let start = currentFrom ? parseYMD(currentFrom) : new Date();
                     let ns = new Date(start);
                     ns.setMonth(start.getMonth() + delta);
                     let ne = new Date(ns.getFullYear(), ns.getMonth() + 1, 0);
                     return { from: formatYMD(ns), to: formatYMD(ne) };
                 }
                 if (currentPresetType === 'year') {
-                    let start = currentFrom ? new Date(currentFrom) : new Date();
+                    let start = currentFrom ? parseYMD(currentFrom) : new Date();
                     let ny = start.getFullYear() + delta;
                     let ns = new Date(ny, 0, 1);
                     let ne = new Date(ny, 11, 31);
@@ -228,8 +276,8 @@
                 }
                 let nextRange = getAdjacentRange('next');
                 if (!nextRange) { rightArrowBtn.disabled = true; return; }
-                const nextStartDate = new Date(nextRange.from);
-                rightArrowBtn.disabled = nextStartDate > TODAY_OBJ;
+                // Use string comparison to avoid timezone issues
+                rightArrowBtn.disabled = isFutureDate(nextRange.from);
             }
             
             async function silentPreload(store, from, to) {
@@ -274,23 +322,24 @@
             function preloadCommonPresets() {
                 if (initialPreloadDone) return;
                 initialPreloadDone = true;
-                const t = new Date(); t.setHours(0,0,0,0);
+                const t = new Date();
+                const todayStr = formatYMD(t);
                 const ws = getWeekStart(t), we = new Date(ws); we.setDate(ws.getDate() + 6);
                 const ms = new Date(t.getFullYear(), t.getMonth(), 1), me = new Date(t.getFullYear(), t.getMonth() + 1, 0);
                 setTimeout(() => {
-                    silentPreload(currentStore, formatYMD(t), formatYMD(t));
+                    silentPreload(currentStore, todayStr, todayStr);
                     silentPreload(currentStore, formatYMD(ws), formatYMD(we));
                     silentPreload(currentStore, formatYMD(ms), formatYMD(me));
                 }, 1000);
             }
             
             function applyPreset(preset, customFrom, customTo) {
-                const t = new Date(); t.setHours(0,0,0,0);
+                const t = new Date();
                 if (preset === 'custom' && customFrom && customTo) {
                     currentPresetType = 'custom';
                     currentFrom = customFrom;
                     currentTo = customTo;
-                    dateRangeLabelSpan.innerText = `${customFrom} → ${customTo}`;
+                    updateDateLabel();
                     refreshDashboard();
                     updateArrowDisabledState();
                     return;
@@ -300,7 +349,7 @@
                     currentDayDate = new Date(t);
                     currentFrom = formatYMD(currentDayDate);
                     currentTo = currentFrom;
-                    dateRangeLabelSpan.innerText = currentFrom;
+                    updateDateLabel();
                     refreshDashboard();
                     updateArrowDisabledState();
                     return;
@@ -311,7 +360,7 @@
                     currentPresetType = 'week';
                     currentFrom = formatYMD(start);
                     currentTo = formatYMD(end);
-                    dateRangeLabelSpan.innerText = `Week of ${currentFrom}`;
+                    updateDateLabel();
                     refreshDashboard();
                     updateArrowDisabledState();
                     return;
@@ -322,7 +371,7 @@
                     currentPresetType = 'month';
                     currentFrom = formatYMD(start);
                     currentTo = formatYMD(end);
-                    dateRangeLabelSpan.innerText = start.toLocaleString('default', { month: 'long', year: 'numeric' });
+                    updateDateLabel();
                     refreshDashboard();
                     updateArrowDisabledState();
                     return;
@@ -331,7 +380,7 @@
                     currentPresetType = 'year';
                     currentFrom = formatYMD(new Date(t.getFullYear(), 0, 1));
                     currentTo = formatYMD(new Date(t.getFullYear(), 11, 31));
-                    dateRangeLabelSpan.innerText = `${t.getFullYear()}`;
+                    updateDateLabel();
                     refreshDashboard();
                     updateArrowDisabledState();
                 }
@@ -344,6 +393,7 @@
                     return;
                 }
                 const delta = dir === 'left' ? -1 : 1;
+                // Check future before shifting
                 if (delta === 1) {
                     const nextRange = getAdjacentRange('next');
                     if (nextRange && isFutureDate(nextRange.from)) {
@@ -351,57 +401,72 @@
                         return;
                     }
                 }
+                
                 if (currentPresetType === 'day') {
                     if (!currentDayDate) currentDayDate = new Date();
                     let nd = new Date(currentDayDate);
                     nd.setDate(currentDayDate.getDate() + delta);
-                    if (delta === 1 && nd > TODAY_OBJ) { showError("No future data."); return; }
+                    const newYMD = formatYMD(nd);
+                    if (delta === 1 && isFutureDate(newYMD)) {
+                        showError("No future data.");
+                        return;
+                    }
                     currentDayDate = nd;
-                    currentFrom = formatYMD(currentDayDate);
+                    currentFrom = newYMD;
                     currentTo = currentFrom;
-                    dateRangeLabelSpan.innerText = currentFrom;
+                    updateDateLabel();
                     refreshDashboard();
                     updateArrowDisabledState();
                     return;
                 }
                 if (currentPresetType === 'week') {
-                    let start = new Date(currentFrom);
+                    let start = parseYMD(currentFrom);
                     if (isNaN(start)) start = getWeekStart(new Date());
                     let ns = new Date(start);
                     ns.setDate(start.getDate() + delta * 7);
                     let ne = new Date(ns);
                     ne.setDate(ns.getDate() + 6);
                     const newFromStr = formatYMD(ns);
-                    if (delta === 1 && isFutureDate(newFromStr)) { showError("Cannot shift week into future."); return; }
+                    if (delta === 1 && isFutureDate(newFromStr)) {
+                        showError("Cannot shift week into future.");
+                        return;
+                    }
                     currentFrom = newFromStr;
                     currentTo = formatYMD(ne);
-                    dateRangeLabelSpan.innerText = `Week of ${currentFrom}`;
+                    updateDateLabel();
                     refreshDashboard();
                     updateArrowDisabledState();
                     return;
                 }
                 if (currentPresetType === 'month') {
-                    let start = new Date(currentFrom);
+                    let start = parseYMD(currentFrom);
                     let ns = new Date(start);
                     ns.setMonth(start.getMonth() + delta);
                     let ne = new Date(ns.getFullYear(), ns.getMonth() + 1, 0);
                     const newFromStr = formatYMD(ns);
-                    if (delta === 1 && isFutureDate(newFromStr)) { showError("Cannot shift month into future."); return; }
+                    if (delta === 1 && isFutureDate(newFromStr)) {
+                        showError("Cannot shift month into future.");
+                        return;
+                    }
                     currentFrom = newFromStr;
                     currentTo = formatYMD(ne);
-                    dateRangeLabelSpan.innerText = ns.toLocaleString('default', { month: 'long', year: 'numeric' });
+                    updateDateLabel();
                     refreshDashboard();
                     updateArrowDisabledState();
                     return;
                 }
                 if (currentPresetType === 'year') {
-                    let start = new Date(currentFrom);
+                    let start = parseYMD(currentFrom);
                     let ny = start.getFullYear() + delta;
                     let ns = new Date(ny, 0, 1);
-                    if (delta === 1 && ns > TODAY_OBJ) { showError("Cannot shift year into future."); return; }
-                    currentFrom = formatYMD(ns);
+                    const newFromStr = formatYMD(ns);
+                    if (delta === 1 && isFutureDate(newFromStr)) {
+                        showError("Cannot shift year into future.");
+                        return;
+                    }
+                    currentFrom = newFromStr;
                     currentTo = formatYMD(new Date(ny, 11, 31));
-                    dateRangeLabelSpan.innerText = `${ny}`;
+                    updateDateLabel();
                     refreshDashboard();
                     updateArrowDisabledState();
                 }
@@ -462,7 +527,6 @@
                 const refundPos = (sales.refundTotal || 0) * -1;
                 document.getElementById('refundAmount').innerText = formatMYR(refundPos > 0 ? refundPos : 0);
                 
-                // Staff table
                 const staffDiv = document.getElementById('staffSalesList');
                 if (!employees.labels || !employees.labels.length) { staffDiv.innerHTML = '<div>No staff sales data</div>'; }
                 else {
@@ -472,20 +536,18 @@
                     staffDiv.innerHTML = h;
                 }
                 
-                // Category
                 const catDiv = document.getElementById('categorySalesList');
                 if (!products.products || !products.products.length) { catDiv.innerHTML = '<div>No category data</div>'; }
                 else {
                     const rev = new Map(), qty = new Map();
                     products.products.forEach(p => { const c = p.category || 'Uncategorized'; rev.set(c, (rev.get(c) || 0) + p.total); qty.set(c, (qty.get(c) || 0) + (p.quantity || 0)); });
                     const sorted = Array.from(rev.entries()).sort((a,b) => b[1] - a[1]);
-                    let h = '<table class="mini-table"><thead><tr><th>Category</th><th>Quantity Sold</th><th>Total Sales (RM)</th></tr></thead><tbody>';
+                    let h = '<table class="mini-table"><thead></tr><th>Category</th><th>Quantity Sold</th><th>Total Sales (RM)</th></tr></thead><tbody>';
                     sorted.forEach(([c, amt]) => { h += `<tr><td><strong>${escapeHtml(c)}</strong></td><td>${formatNumber(qty.get(c))}</td><td>${formatMYR(amt)}</td></tr>`; });
                     h += '</tbody></table>';
                     catDiv.innerHTML = h;
                 }
                 
-                // Products — FULL LIST (no slice)
                 const prodDiv = document.getElementById('productsList');
                 if (!products.products || !products.products.length) { prodDiv.innerHTML = '<div>No product sales</div>'; }
                 else {
@@ -531,7 +593,7 @@
             function showError(msg) { errorDiv.innerText = msg; errorDiv.style.display = 'block'; setTimeout(() => errorDiv.style.display = 'none', 4000); }
             function escapeHtml(s) { if (!s) return ''; return s.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
             
-            // ----- Modal logic -----
+            // Modal logic
             const storeModal = document.getElementById('storeModal');
             const dateModal = document.getElementById('dateModal');
             function openStoreModal() { storeModal.classList.add('active'); }
@@ -549,7 +611,7 @@
                 closeDateModal();
             }
             
-            // Attach event listeners
+            // Event listeners
             refreshBtn.addEventListener('click', refreshDashboard);
             leftArrowBtn.addEventListener('click', () => shiftDateRange('left'));
             rightArrowBtn.addEventListener('click', () => shiftDateRange('right'));
@@ -566,7 +628,6 @@
             if (storeModal) storeModal.addEventListener('click', (e) => { if (e.target === storeModal) closeStoreModal(); });
             if (dateModal) dateModal.addEventListener('click', (e) => { if (e.target === dateModal) closeDateModal(); });
             
-            // Chart toggle
             document.querySelectorAll('.toggle-btn').forEach(btn => btn.addEventListener('click', () => {
                 document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
@@ -575,13 +636,13 @@
                 else if (trendChart && trendChart.data) renderChartWithData({ salesByDay: { labels: trendChart.data.labels, data: trendChart.data.datasets[0].data } });
             }));
             
-            // Initial load: today
-            const todayNow = new Date(); todayNow.setHours(0,0,0,0);
+            // Initial load: today (using local date to avoid timezone shift)
+            const todayNow = new Date();
             currentPresetType = 'day';
             currentDayDate = new Date(todayNow);
             currentFrom = formatYMD(currentDayDate);
             currentTo = currentFrom;
-            dateRangeLabelSpan.innerText = currentFrom;
+            updateDateLabel();   // Will display "Today" because isTodayDate == true
             storeNameSpan.innerText = "Queensbay Mall";
             refreshDashboard();
         });
