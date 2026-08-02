@@ -114,7 +114,8 @@
         .modal-bottom { background: white; width: 100%; max-width: 520px; border-radius: 32px 32px 0 0; padding: 24px 20px 32px; transform: translateY(100%); transition: transform 0.25s ease-out; max-height: 85vh; overflow-y: auto; }
         .active .modal-bottom { transform: translateY(0); }
         .modal-title { font-weight: 700; font-size: 1.3rem; margin-bottom: 20px; text-align: center; }
-        .store-option, .preset-option { background: #f8fafd; padding: 16px 18px; margin-bottom: 12px; border-radius: 60px; font-weight: 600; font-size: 1rem; text-align: center; cursor: pointer; border: 1px solid #eef2f8; }
+        .store-option, .preset-option { background: #f8fafd; padding: 16px 18px; margin-bottom: 12px; border-radius: 60px; font-weight: 600; font-size: 1rem; text-align: center; cursor: pointer; border: 1px solid #eef2f8; transition: 0.2s; }
+        .store-option:hover, .preset-option:hover { background: #eef2ff; border-color: #2b6e9e; }
         .close-modal { margin-top: 20px; background: none; border: 1px solid #cfdfed; padding: 14px; border-radius: 60px; width: 100%; font-weight: 600; cursor: pointer; }
         .date-range-custom { margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap; }
         .date-range-custom input { flex: 1; padding: 12px; border-radius: 30px; border: 1px solid #dce3ec; font-size: 0.9rem; }
@@ -136,6 +137,12 @@
         .free-item-row td { color: #92400e; }
         .paid-item-row td { color: #065f46; }
         .item-detail { font-size: 0.75rem; color: #6c86a3; display: block; }
+        .skeleton { background: #e9edf2; border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
+        .kpi-skeleton { height: 40px; width: 80%; margin-top: 12px; }
+        .staff-skeleton { height: 30px; margin: 8px 0; }
+        .product-skeleton { height: 25px; margin: 4px 0; }
+        .preset-option.active { background: #eef2ff; border-color: #2b6e9e; }
     </style>
 </head>
 <body>
@@ -155,10 +162,10 @@
 <div class="dashboard-container">
     <div id="errorMsg" class="error-toast"></div>
     <div class="kpi-grid">
-        <div class="kpi-card"><div class="kpi-label">TOTAL SALES (RM)</div><div class="kpi-value" id="totalSales">—</div></div>
-        <div class="kpi-card"><div class="kpi-label">TRANSACTIONS</div><div class="kpi-value" id="txnCount">—</div></div>
-        <div class="kpi-card"><div class="kpi-label">ITEMS SOLD</div><div class="kpi-value" id="itemsSold">—</div></div>
-        <div class="kpi-card"><div class="kpi-label">AVG. TICKET</div><div class="kpi-value" id="avgTicket">—</div></div>
+        <div class="kpi-card"><div class="kpi-label">TOTAL SALES (RM)</div><div class="kpi-value" id="totalSales"><div class="skeleton kpi-skeleton"></div></div></div>
+        <div class="kpi-card"><div class="kpi-label">TRANSACTIONS</div><div class="kpi-value" id="txnCount"><div class="skeleton kpi-skeleton"></div></div></div>
+        <div class="kpi-card"><div class="kpi-label">ITEMS SOLD</div><div class="kpi-value" id="itemsSold"><div class="skeleton kpi-skeleton"></div></div></div>
+        <div class="kpi-card"><div class="kpi-label">AVG. TICKET</div><div class="kpi-value" id="avgTicket"><div class="skeleton kpi-skeleton"></div></div></div>
     </div>
     <div class="section-card">
         <div class="staff-header">
@@ -168,12 +175,11 @@
                 <button class="download-report-btn" id="receiptPdfBtn" style="background:#2c5a2e;">🧾 Download Receipts PDF</button>
             </div>
         </div>
-        <div id="staffSalesList">Loading...</div>
+        <div id="staffSalesList"><div class="skeleton staff-skeleton"></div><div class="skeleton staff-skeleton"></div><div class="skeleton staff-skeleton"></div></div>
     </div>
     <div class="section-card"><div class="section-title">💵 Payment Breakdown</div><div class="payment-breakdown"><div class="payment-item"><div class="payment-method">Cash</div><div class="payment-amount" id="cashAmount">—</div></div><div class="payment-item"><div class="payment-method">Card</div><div class="payment-amount" id="cardAmount">—</div></div><div class="payment-item"><div class="payment-method">Alipay</div><div class="payment-amount" id="alipayAmount">—</div></div><div class="payment-item"><div class="payment-method">TnG</div><div class="payment-amount" id="otherAmount">—</div></div><div class="payment-item"><div class="payment-method">Refunds</div><div class="payment-amount" id="refundAmount">—</div></div></div></div>
     <div class="section-card"><div class="chart-header"><div class="section-title" style="margin-bottom:0; border-left: none;">📈 Sales Trend</div><div class="toggle-group" id="chartToggleGroup"><button class="toggle-btn active" data-chart-type="line">Line</button><button class="toggle-btn" data-chart-type="bar">Bar</button></div></div><canvas id="trendChart"></canvas></div>
     
-    <!-- ========== TOP PRODUCTS SECTION - FIXED ========== -->
     <div class="section-card">
         <div class="section-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
             <span style="border-left: 5px solid #2b6e9e; padding-left: 14px;">🏆 Product Sales Breakdown</span>
@@ -191,14 +197,13 @@
         </div>
         <div id="productTotalWarning" class="missing-warning" style="display:none;"></div>
         <div id="productTotalSuccess" class="success-warning" style="display:none;"></div>
-        <div id="productsList" class="product-table-container">Loading...</div>
+        <div id="productsList"><div class="skeleton product-skeleton"></div><div class="skeleton product-skeleton"></div><div class="skeleton product-skeleton"></div></div>
         <div class="note">* 🎁 = Free item (Buy X Free Y promotion). 💰 = Paid item.</div>
     </div>
-    <!-- ========== END TOP PRODUCTS SECTION ========== -->
     
     <div class="section-card">
         <div class="section-title">📊 Sales by Category</div>
-        <div id="categorySalesList">Loading...</div>
+        <div id="categorySalesList"><div class="skeleton product-skeleton"></div><div class="skeleton product-skeleton"></div></div>
         <div class="note">* Category totals reflect discounted revenue. Free items counted in quantity but not revenue.</div>
     </div>
 </div>
@@ -207,7 +212,7 @@
 <div id="storeModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">🏬 Select Store</div><div class="store-option" data-store="all" data-name="All Stores">🏢 All Stores (Combined)</div><div class="store-option" data-store="queens" data-name="Queensbay Mall">Queensbay Mall</div><div class="store-option" data-store="sunshine" data-name="Sunshine Central">Sunshine Central</div><div class="store-option" data-store="gurney_paragon" data-name="Gurney Paragon">Gurney Paragon</div><button class="close-modal" id="closeStoreModal">Cancel</button></div></div>
 
 <!-- Date Modal -->
-<div id="dateModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">📅 Select Range</div><div class="preset-option" data-preset="today">Today</div><div class="preset-option" data-preset="week">This Week</div><div class="preset-option" data-preset="month">This Month</div><div class="preset-option" data-preset="year">This Year</div><div class="divider"></div><div class="preset-option" data-preset="custom">📆 Custom</div><div id="customDateRange" style="display: none;"><div class="date-range-custom"><input type="date" id="customFromDate"><input type="date" id="customToDate"><button class="apply-custom" id="applyCustomBtn">Apply</button></div></div><button class="close-modal" id="closeDateModal">Close</button></div></div>
+<div id="dateModal" class="modal-overlay"><div class="modal-bottom"><div class="modal-title">📅 Select Range</div><div class="preset-option" data-preset="today">Today</div><div class="preset-option" data-preset="week">This Week</div><div class="preset-option" data-preset="month">This Month</div><div class="preset-option" data-preset="lastmonth">Last Month</div><div class="preset-option" data-preset="year">This Year</div><div class="preset-option" data-preset="lastyear">Last Year</div><div class="divider"></div><div class="preset-option" data-preset="custom">📆 Custom</div><div id="customDateRange" style="display: none;"><div class="date-range-custom"><input type="date" id="customFromDate"><input type="date" id="customToDate"><button class="apply-custom" id="applyCustomBtn">Apply</button></div></div><button class="close-modal" id="closeDateModal">Close</button></div></div>
 
 <!-- Download Report Modal -->
 <div id="reportDownloadModal" class="modal-overlay">
@@ -233,7 +238,7 @@
     </div>
 </div>
 
-<!-- Receipt Choice Modal (Standard vs IRS) -->
+<!-- Receipt Choice Modal -->
 <div id="receiptChoiceModal" class="modal-overlay">
     <div class="modal-bottom">
         <div class="modal-title">🧾 Select Receipt Type</div>
@@ -251,7 +256,7 @@
     </div>
 </div>
 
-<!-- Standard Receipts Modal (without discount) -->
+<!-- Standard Receipts Modal -->
 <div id="receiptPdfModal" class="modal-overlay">
     <div class="modal-bottom">
         <div class="modal-title">🧾 Standard Receipts PDF</div>
@@ -282,7 +287,7 @@
     </div>
 </div>
 
-<!-- IRS Receipts Modal (with discount row) -->
+<!-- IRS Receipts Modal -->
 <div id="irsReceiptModal" class="modal-overlay">
     <div class="modal-bottom">
         <div class="modal-title">🏦 IRS Reporting Receipts (shows discount)</div>
@@ -361,8 +366,8 @@
             // ----- Config & State -----
             const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxPfPCmGXDDDakhgXVAr1wGKnqaVzWE3eAUYMBJtzT8WCYj3peHeXGbJD00RX7jqLl8LQ/exec";
             const POS_BACKEND_URL = "https://script.google.com/macros/s/AKfycbxPfPCmGXDDDakhgXVAr1wGKnqaVzWE3eAUYMBJtzT8WCYj3peHeXGbJD00RX7jqLl8LQ/exec";
-            const CACHE_TTL = 30000;
-            const PRELOAD_DELAY = 800;
+            
+            const CACHE_TTL = 120000;
             const cache = new Map();
             let currentAbortController = null;
             let lastChartResponseData = null;
@@ -381,8 +386,335 @@
             let allEmployeesList = [];
             let productCategoryMap = {};
             let rawReceiptsData = [];
+            let isInitialLoad = true;
+
+            // ----- Helper functions -----
+            function getTodayYMD() {
+                const d = new Date();
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            const TODAY_YMD = getTodayYMD();
             
-            // ========== FETCH PRODUCT CATEGORY MAP ==========
+            function formatYMD(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            
+            function parseYMD(ymd) {
+                const [year, month, day] = ymd.split('-').map(Number);
+                return new Date(year, month - 1, day);
+            }
+            
+            function getWeekStart(d) { 
+                let nd = new Date(d); 
+                const day = nd.getDay(); 
+                const diff = (day === 0 ? -6 : 1 - day); 
+                nd.setDate(nd.getDate() + diff); 
+                return nd; 
+            }
+            
+            function formatMYR(v) { return `RM ${(v || 0).toFixed(2)}`; }
+            function formatNumber(v) { return (parseInt(v) || 0).toLocaleString(); }
+            function getCacheKey(a,s,f,t) { return `${a}|${s}|${f}|${t}`; }
+            function getCached(a,s,f,t) { const e = cache.get(getCacheKey(a,s,f,t)); if (e && (Date.now() - e.timestamp) < CACHE_TTL) return e.data; return null; }
+            function setCache(a,s,f,t,d) { cache.set(getCacheKey(a,s,f,t), { data: d, timestamp: Date.now() }); }
+            
+            function isFutureDate(ymd) { return ymd > TODAY_YMD; }
+            function isTodayDate(ymd) { return ymd === TODAY_YMD; }
+            
+            function updateDateLabel() {
+                if (currentPresetType === 'custom') {
+                    dateRangeLabelSpan.innerText = `${currentFrom} → ${currentTo}`;
+                } else if (currentPresetType === 'day') {
+                    if (isTodayDate(currentFrom)) dateRangeLabelSpan.innerText = "Today";
+                    else dateRangeLabelSpan.innerText = currentFrom;
+                } else if (currentPresetType === 'week') {
+                    dateRangeLabelSpan.innerText = `Week of ${currentFrom}`;
+                } else if (currentPresetType === 'month') {
+                    try {
+                        const startDate = parseYMD(currentFrom);
+                        dateRangeLabelSpan.innerText = startDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+                    } catch(e) { dateRangeLabelSpan.innerText = currentFrom; }
+                } else if (currentPresetType === 'year') {
+                    dateRangeLabelSpan.innerText = `${parseYMD(currentFrom).getFullYear()}`;
+                }
+            }
+            
+            function getAdjacentRange(dir) {
+                const delta = dir === 'next' ? 1 : -1;
+                if (currentPresetType === 'day') {
+                    let d = currentDayDate ? new Date(currentDayDate) : new Date();
+                    let nd = new Date(d);
+                    nd.setDate(d.getDate() + delta);
+                    return { from: formatYMD(nd), to: formatYMD(nd) };
+                }
+                if (currentPresetType === 'week') {
+                    let start = parseYMD(currentFrom);
+                    if (isNaN(start)) start = getWeekStart(new Date());
+                    let ns = new Date(start);
+                    ns.setDate(start.getDate() + delta * 7);
+                    let ne = new Date(ns);
+                    ne.setDate(ns.getDate() + 6);
+                    return { from: formatYMD(ns), to: formatYMD(ne) };
+                }
+                if (currentPresetType === 'month') {
+                    let start = currentFrom ? parseYMD(currentFrom) : new Date();
+                    let ns = new Date(start);
+                    ns.setMonth(start.getMonth() + delta);
+                    let ne = new Date(ns.getFullYear(), ns.getMonth() + 1, 0);
+                    return { from: formatYMD(ns), to: formatYMD(ne) };
+                }
+                if (currentPresetType === 'year') {
+                    let start = currentFrom ? parseYMD(currentFrom) : new Date();
+                    let ny = start.getFullYear() + delta;
+                    let ns = new Date(ny, 0, 1);
+                    let ne = new Date(ny, 11, 31);
+                    return { from: formatYMD(ns), to: formatYMD(ne) };
+                }
+                return null;
+            }
+            
+            function updateArrowDisabledState() {
+                if (currentPresetType === 'custom') { rightArrowBtn.disabled = true; return; }
+                let nextRange = getAdjacentRange('next');
+                if (!nextRange) { rightArrowBtn.disabled = true; return; }
+                rightArrowBtn.disabled = isFutureDate(nextRange.from);
+            }
+
+            // ----- FIXED: applyPreset with all date options -----
+            function applyPreset(preset, customFrom, customTo) {
+                const t = new Date();
+                const today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+                
+                if (preset === 'custom' && customFrom && customTo) {
+                    currentPresetType = 'custom';
+                    currentFrom = customFrom;
+                    currentTo = customTo;
+                    updateDateLabel();
+                    refreshDashboard();
+                    updateArrowDisabledState();
+                    return;
+                }
+                
+                if (preset === 'today') {
+                    currentPresetType = 'day';
+                    currentDayDate = new Date(today);
+                    currentFrom = formatYMD(currentDayDate);
+                    currentTo = currentFrom;
+                    updateDateLabel();
+                    refreshDashboard();
+                    updateArrowDisabledState();
+                    return;
+                }
+                
+                if (preset === 'week') {
+                    let start = getWeekStart(today);
+                    let end = new Date(start);
+                    end.setDate(start.getDate() + 6);
+                    currentPresetType = 'week';
+                    currentFrom = formatYMD(start);
+                    currentTo = formatYMD(end);
+                    updateDateLabel();
+                    refreshDashboard();
+                    updateArrowDisabledState();
+                    return;
+                }
+                
+                if (preset === 'month') {
+                    let start = new Date(today.getFullYear(), today.getMonth(), 1);
+                    let end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                    currentPresetType = 'month';
+                    currentFrom = formatYMD(start);
+                    currentTo = formatYMD(end);
+                    updateDateLabel();
+                    refreshDashboard();
+                    updateArrowDisabledState();
+                    return;
+                }
+                
+                if (preset === 'lastmonth') {
+                    let start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    let end = new Date(today.getFullYear(), today.getMonth(), 0);
+                    currentPresetType = 'month';
+                    currentFrom = formatYMD(start);
+                    currentTo = formatYMD(end);
+                    updateDateLabel();
+                    refreshDashboard();
+                    updateArrowDisabledState();
+                    return;
+                }
+                
+                if (preset === 'year') {
+                    currentPresetType = 'year';
+                    currentFrom = formatYMD(new Date(today.getFullYear(), 0, 1));
+                    currentTo = formatYMD(new Date(today.getFullYear(), 11, 31));
+                    updateDateLabel();
+                    refreshDashboard();
+                    updateArrowDisabledState();
+                    return;
+                }
+                
+                if (preset === 'lastyear') {
+                    const lastYear = today.getFullYear() - 1;
+                    currentPresetType = 'year';
+                    currentFrom = formatYMD(new Date(lastYear, 0, 1));
+                    currentTo = formatYMD(new Date(lastYear, 11, 31));
+                    updateDateLabel();
+                    refreshDashboard();
+                    updateArrowDisabledState();
+                    return;
+                }
+            }
+            
+            function shiftDateRange(dir) {
+                if (refreshInProgress) return;
+                if (currentPresetType === 'custom') { showError("Custom range cannot be shifted. Select a preset."); return; }
+                const delta = dir === 'left' ? -1 : 1;
+                if (delta === 1) { const nextRange = getAdjacentRange('next'); if (nextRange && isFutureDate(nextRange.from)) { showError("Cannot go beyond today's date."); return; } }
+                if (currentPresetType === 'day') {
+                    if (!currentDayDate) currentDayDate = new Date();
+                    let nd = new Date(currentDayDate);
+                    nd.setDate(currentDayDate.getDate() + delta);
+                    const newYMD = formatYMD(nd);
+                    if (delta === 1 && isFutureDate(newYMD)) { showError("No future data."); return; }
+                    currentDayDate = nd;
+                    currentFrom = newYMD;
+                    currentTo = currentFrom;
+                    updateDateLabel();
+                    refreshDashboard();
+                    updateArrowDisabledState();
+                    return;
+                }
+                if (currentPresetType === 'week') {
+                    let start = parseYMD(currentFrom);
+                    if (isNaN(start)) start = getWeekStart(new Date());
+                    let ns = new Date(start);
+                    ns.setDate(start.getDate() + delta * 7);
+                    let ne = new Date(ns);
+                    ne.setDate(ns.getDate() + 6);
+                    const newFromStr = formatYMD(ns);
+                    if (delta === 1 && isFutureDate(newFromStr)) { showError("Cannot shift week into future."); return; }
+                    currentFrom = newFromStr;
+                    currentTo = formatYMD(ne);
+                    updateDateLabel();
+                    refreshDashboard();
+                    updateArrowDisabledState();
+                    return;
+                }
+                if (currentPresetType === 'month') {
+                    let start = parseYMD(currentFrom);
+                    let ns = new Date(start);
+                    ns.setMonth(start.getMonth() + delta);
+                    let ne = new Date(ns.getFullYear(), ns.getMonth() + 1, 0);
+                    const newFromStr = formatYMD(ns);
+                    if (delta === 1 && isFutureDate(newFromStr)) { showError("Cannot shift month into future."); return; }
+                    currentFrom = newFromStr;
+                    currentTo = formatYMD(ne);
+                    updateDateLabel();
+                    refreshDashboard();
+                    updateArrowDisabledState();
+                    return;
+                }
+                if (currentPresetType === 'year') {
+                    let start = parseYMD(currentFrom);
+                    let ny = start.getFullYear() + delta;
+                    let ns = new Date(ny, 0, 1);
+                    const newFromStr = formatYMD(ns);
+                    if (delta === 1 && isFutureDate(newFromStr)) { showError("Cannot shift year into future."); return; }
+                    currentFrom = newFromStr;
+                    currentTo = formatYMD(new Date(ny, 11, 31));
+                    updateDateLabel();
+                    refreshDashboard();
+                    updateArrowDisabledState();
+                }
+            }
+            
+            function triggerAdjacentPreload() { 
+                if (preloadTimer) clearTimeout(preloadTimer); 
+                if (currentPresetType === 'custom') return; 
+                preloadTimer = setTimeout(() => { 
+                    const nr = getAdjacentRange('next'); 
+                    const pr = getAdjacentRange('prev'); 
+                    if (nr && !isFutureDate(nr.from)) silentPreload(currentStore, nr.from, nr.to); 
+                    if (pr) silentPreload(currentStore, pr.from, pr.to); 
+                }, 300);
+            }
+            
+            function silentPreload(store, from, to) { 
+                fetchAllDataSilent(store, from, to).catch(() => {});
+            }
+            
+            async function fetchAllDataSilent(s, f, t) {
+                const cacheKey = `silent|${s}|${f}|${t}`;
+                if (cache.has(cacheKey)) return;
+                try {
+                    const [sales, chart, employees] = await Promise.all([
+                        fetchApiSilent('getSalesReport', s, f, t),
+                        fetchApiSilent('getSalesChartData', s, f, t),
+                        fetchApiSilent('getEmployeeSalesData', s, f, t)
+                    ]);
+                    cache.set(cacheKey, { sales, chart, employees, timestamp: Date.now() });
+                } catch(e) {}
+            }
+            
+            async function fetchApiSilent(a, s, f, t) {
+                const key = `${a}|${s}|${f}|${t}`;
+                if (cache.has(key)) return cache.get(key).data;
+                try {
+                    const url = `${BACKEND_URL}?action=${a}&store=${s}&from=${f}&to=${t}&employeeId=all`;
+                    const res = await fetch(url, { method: 'GET' });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const d = await res.json();
+                    if (d && d.success === false) throw new Error(d.error || "API error");
+                    setCache(a, s, f, t, d);
+                    return d;
+                } catch(e) {
+                    return null;
+                }
+            }
+            
+            function preloadCommonPresets() { 
+                if (initialPreloadDone) return; 
+                initialPreloadDone = true; 
+                const t = new Date(); 
+                const todayStr = formatYMD(t); 
+                const ws = getWeekStart(t), we = new Date(ws); 
+                we.setDate(ws.getDate() + 6); 
+                const ms = new Date(t.getFullYear(), t.getMonth(), 1), me = new Date(t.getFullYear(), t.getMonth() + 1, 0); 
+                setTimeout(() => { 
+                    silentPreload(currentStore, todayStr, todayStr); 
+                    silentPreload(currentStore, formatYMD(ws), formatYMD(we)); 
+                    silentPreload(currentStore, formatYMD(ms), formatYMD(me)); 
+                }, 500);
+            }
+            
+            // ----- Core data fetching -----
+            async function fetchApi(a, s, f, t, sig) {
+                const c = getCached(a, s, f, t);
+                if (c) return c;
+                const url = `${BACKEND_URL}?action=${a}&store=${s}&from=${f}&to=${t}&employeeId=all`;
+                const res = await fetch(url, { method: 'GET', signal: sig });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const d = await res.json();
+                if (d && d.success === false) throw new Error(d.error || "API error");
+                setCache(a, s, f, t, d);
+                return d;
+            }
+            
+            async function fetchAllData(s, f, t, sig) {
+                const [sales, chart, employees] = await Promise.all([
+                    fetchApi('getSalesReport', s, f, t, sig),
+                    fetchApi('getSalesChartData', s, f, t, sig),
+                    fetchApi('getEmployeeSalesData', s, f, t, sig)
+                ]);
+                return { sales, chart, employees };
+            }
+            
             async function fetchProductCategoryMap(store) {
                 try {
                     const url = `${POS_BACKEND_URL}?action=getAllProducts&store=${store}`;
@@ -394,17 +726,14 @@
                         result.products.forEach(p => {
                             productCategoryMap[p.id] = p.category || 'Uncategorized';
                         });
-                        console.log(`✅ Loaded ${Object.keys(productCategoryMap).length} product categories`);
                         return productCategoryMap;
                     }
                     return {};
                 } catch (err) {
-                    console.error('Error fetching product categories:', err);
                     return {};
                 }
             }
 
-            // ========== FETCH RAW RECEIPTS ==========
             async function fetchRawReceipts(store, from, to) {
                 try {
                     const url = `${POS_BACKEND_URL}?action=getReceipts&store=${store}&from=${from}&to=${to}&employeeId=all`;
@@ -413,17 +742,15 @@
                     
                     if (result.success && result.receipts) {
                         rawReceiptsData = result.receipts;
-                        console.log(`✅ Loaded ${rawReceiptsData.length} receipts`);
                         return rawReceiptsData;
                     }
                     return [];
                 } catch (err) {
-                    console.error('Error fetching receipts:', err);
                     return [];
                 }
             }
 
-            // ========== BUILD ACCURATE PRODUCT BREAKDOWN FROM RECEIPTS ==========
+            // ----- Data processing functions -----
             function buildProductBreakdownFromReceipts(receipts, categoryMap) {
                 const productMap = new Map();
                 let totalSalesFromProducts = 0;
@@ -436,10 +763,8 @@
                     const items = receipt.items || [];
                     const receiptTotal = parseFloat(receipt.total) || 0;
                     
-                    // Skip refunds (negative totals)
                     if (receiptTotal < 0) return;
                     
-                    // If there are no items, try to use the item_name field
                     if (items.length === 0 && receipt.item_name) {
                         const item = {
                             id: receipt.item_id || 'unknown',
@@ -457,28 +782,15 @@
                         const name = item.name || item.item_name || 'Unknown Product';
                         const category = categoryMap[id] || item.category || 'Uncategorized';
                         
-                        // Get the free_quantity from the item
                         const freeQty = parseInt(item.free_quantity) || 0;
                         const totalQty = parseInt(item.quantity) || 0;
-                        
-                        // Calculate paid quantity: total - free
                         const paidQty = Math.max(0, totalQty - freeQty);
-                        
-                        // Get the price per unit
                         const unitPrice = parseFloat(item.price) || 0;
-                        
-                        // Get the total for this item (from the receipt)
                         const itemTotal = parseFloat(item.total) || 0;
                         
-                        // Determine if this is a Buy X Free Y promotion
                         const isBuyXFreeY = freeQty > 0;
-                        
-                        // For Buy X Free Y: the total should be paidQty * unitPrice
-                        // But we use the actual itemTotal from the receipt
                         const paidRevenue = isBuyXFreeY ? (paidQty * unitPrice) : itemTotal;
-                        const freeRevenue = 0; // Free items always have 0 revenue
                         
-                        // Initialize or get existing product entry
                         if (!productMap.has(id)) {
                             productMap.set(id, {
                                 id: id,
@@ -496,14 +808,11 @@
                         }
                         const existing = productMap.get(id);
                         
-                        // Update quantities
                         existing.totalQuantity += totalQty;
                         existing.paidQuantity += paidQty;
                         existing.freeQuantity += freeQty;
                         
-                        // Update revenue
                         if (isBuyXFreeY) {
-                            // Buy X Free Y: only the paid items generate revenue
                             existing.paidRevenue += paidRevenue;
                             existing.totalRevenue += paidRevenue;
                             existing.isBuyXFreeY = true;
@@ -512,7 +821,6 @@
                             freeItemCount += freeQty;
                             totalFreeItemValue += freeQty * unitPrice;
                         } else {
-                            // Regular item: use the item total
                             existing.paidRevenue += itemTotal;
                             existing.totalRevenue += itemTotal;
                             totalSalesFromProducts += itemTotal;
@@ -528,8 +836,6 @@
                 });
                 
                 const products = Array.from(productMap.values());
-                console.log(`📊 Product breakdown: ${products.length} products, Total: RM ${totalSalesFromProducts.toFixed(2)}, Paid: ${paidItemCount}, Free: ${freeItemCount}`);
-                
                 return {
                     products: products,
                     totalSales: totalSalesFromProducts,
@@ -540,10 +846,8 @@
                 };
             }
 
-            // ========== GENERATE FULL PRODUCT LIST CSV ==========
             function generateFullProductListCSV(productsData, fromDate, toDate, storeName, sortBy) {
                 if (!productsData || productsData.length === 0) {
-                    showError("No product data available to export");
                     return null;
                 }
 
@@ -650,7 +954,6 @@
                 return csvLines.join("\n");
             }
 
-            // ========== DOWNLOAD FULL PRODUCT LIST ==========
             async function downloadFullProductList() {
                 if (!currentFrom || !currentTo) {
                     showError("Please select a date range first");
@@ -705,282 +1008,41 @@
                     setTimeout(() => document.getElementById('errorMsg').style.display = 'none', 3000);
 
                 } catch (err) {
-                    console.error('Download error:', err);
                     showError('Failed to download: ' + err.message);
                 } finally {
                     loadingDiv.remove();
                 }
             }
 
-            // Helper: get today's YYYY-MM-DD in local time
-            function getTodayYMD() {
-                const d = new Date();
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            }
-            const TODAY_YMD = getTodayYMD();
-            
-            function formatYMD(date) {
-                const year = date.getFullYear();
-                const month = String(date.getMonth() + 1).padStart(2, '0');
-                const day = String(date.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            }
-            
-            function parseYMD(ymd) {
-                const [year, month, day] = ymd.split('-').map(Number);
-                return new Date(year, month - 1, day);
-            }
-            
-            function getWeekStart(d) { 
-                let nd = new Date(d); 
-                const day = nd.getDay(); 
-                const diff = (day === 0 ? -6 : 1 - day); 
-                nd.setDate(nd.getDate() + diff); 
-                return nd; 
-            }
-            
-            function formatMYR(v) { return `RM ${(v || 0).toFixed(2)}`; }
-            function formatNumber(v) { return (parseInt(v) || 0).toLocaleString(); }
-            function getCacheKey(a,s,f,t) { return `${a}|${s}|${f}|${t}`; }
-            function getCached(a,s,f,t) { const e = cache.get(getCacheKey(a,s,f,t)); if (e && (Date.now() - e.timestamp) < CACHE_TTL) return e.data; return null; }
-            function setCache(a,s,f,t,d) { cache.set(getCacheKey(a,s,f,t), { data: d, timestamp: Date.now() }); }
-            
-            function isFutureDate(ymd) { return ymd > TODAY_YMD; }
-            function isTodayDate(ymd) { return ymd === TODAY_YMD; }
-            
-            function updateDateLabel() {
-                if (currentPresetType === 'custom') {
-                    dateRangeLabelSpan.innerText = `${currentFrom} → ${currentTo}`;
-                } else if (currentPresetType === 'day') {
-                    if (isTodayDate(currentFrom)) dateRangeLabelSpan.innerText = "Today";
-                    else dateRangeLabelSpan.innerText = currentFrom;
-                } else if (currentPresetType === 'week') {
-                    dateRangeLabelSpan.innerText = `Week of ${currentFrom}`;
-                } else if (currentPresetType === 'month') {
-                    try {
-                        const startDate = parseYMD(currentFrom);
-                        dateRangeLabelSpan.innerText = startDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-                    } catch(e) { dateRangeLabelSpan.innerText = currentFrom; }
-                } else if (currentPresetType === 'year') {
-                    dateRangeLabelSpan.innerText = `${parseYMD(currentFrom).getFullYear()}`;
-                }
-            }
-            
-            function getAdjacentRange(dir) {
-                const delta = dir === 'next' ? 1 : -1;
-                if (currentPresetType === 'day') {
-                    let d = currentDayDate ? new Date(currentDayDate) : new Date();
-                    let nd = new Date(d);
-                    nd.setDate(d.getDate() + delta);
-                    return { from: formatYMD(nd), to: formatYMD(nd) };
-                }
-                if (currentPresetType === 'week') {
-                    let start = parseYMD(currentFrom);
-                    if (isNaN(start)) start = getWeekStart(new Date());
-                    let ns = new Date(start);
-                    ns.setDate(start.getDate() + delta * 7);
-                    let ne = new Date(ns);
-                    ne.setDate(ns.getDate() + 6);
-                    return { from: formatYMD(ns), to: formatYMD(ne) };
-                }
-                if (currentPresetType === 'month') {
-                    let start = currentFrom ? parseYMD(currentFrom) : new Date();
-                    let ns = new Date(start);
-                    ns.setMonth(start.getMonth() + delta);
-                    let ne = new Date(ns.getFullYear(), ns.getMonth() + 1, 0);
-                    return { from: formatYMD(ns), to: formatYMD(ne) };
-                }
-                if (currentPresetType === 'year') {
-                    let start = currentFrom ? parseYMD(currentFrom) : new Date();
-                    let ny = start.getFullYear() + delta;
-                    let ns = new Date(ny, 0, 1);
-                    let ne = new Date(ny, 11, 31);
-                    return { from: formatYMD(ns), to: formatYMD(ne) };
-                }
-                return null;
-            }
-            
-            function updateArrowDisabledState() {
-                if (currentPresetType === 'custom') { rightArrowBtn.disabled = true; return; }
-                let nextRange = getAdjacentRange('next');
-                if (!nextRange) { rightArrowBtn.disabled = true; return; }
-                rightArrowBtn.disabled = isFutureDate(nextRange.from);
-            }
-            
-            async function silentPreload(store, from, to) { /* minimal */ }
-            function triggerAdjacentPreload() { if (preloadTimer) clearTimeout(preloadTimer); if (currentPresetType === 'custom') return; preloadTimer = setTimeout(() => { const nr = getAdjacentRange('next'); const pr = getAdjacentRange('prev'); if (nr && !isFutureDate(nr.from)) silentPreload(currentStore, nr.from, nr.to); if (pr) silentPreload(currentStore, pr.from, pr.to); }, PRELOAD_DELAY); }
-            function preloadCommonPresets() { if (initialPreloadDone) return; initialPreloadDone = true; const t = new Date(); const todayStr = formatYMD(t); const ws = getWeekStart(t), we = new Date(ws); we.setDate(ws.getDate() + 6); const ms = new Date(t.getFullYear(), t.getMonth(), 1), me = new Date(t.getFullYear(), t.getMonth() + 1, 0); setTimeout(() => { silentPreload(currentStore, todayStr, todayStr); silentPreload(currentStore, formatYMD(ws), formatYMD(we)); silentPreload(currentStore, formatYMD(ms), formatYMD(me)); }, 1000); }
-            
-            function applyPreset(preset, customFrom, customTo) {
-                const t = new Date();
-                if (preset === 'custom' && customFrom && customTo) {
-                    currentPresetType = 'custom';
-                    currentFrom = customFrom;
-                    currentTo = customTo;
-                    updateDateLabel();
-                    refreshDashboard();
-                    updateArrowDisabledState();
-                    return;
-                }
-                if (preset === 'today') {
-                    currentPresetType = 'day';
-                    currentDayDate = new Date(t);
-                    currentFrom = formatYMD(currentDayDate);
-                    currentTo = currentFrom;
-                    updateDateLabel();
-                    refreshDashboard();
-                    updateArrowDisabledState();
-                    return;
-                }
-                if (preset === 'week') {
-                    let start = getWeekStart(t), end = new Date(start);
-                    end.setDate(start.getDate() + 6);
-                    currentPresetType = 'week';
-                    currentFrom = formatYMD(start);
-                    currentTo = formatYMD(end);
-                    updateDateLabel();
-                    refreshDashboard();
-                    updateArrowDisabledState();
-                    return;
-                }
-                if (preset === 'month') {
-                    let start = new Date(t.getFullYear(), t.getMonth(), 1);
-                    let end = new Date(t.getFullYear(), t.getMonth() + 1, 0);
-                    currentPresetType = 'month';
-                    currentFrom = formatYMD(start);
-                    currentTo = formatYMD(end);
-                    updateDateLabel();
-                    refreshDashboard();
-                    updateArrowDisabledState();
-                    return;
-                }
-                if (preset === 'year') {
-                    currentPresetType = 'year';
-                    currentFrom = formatYMD(new Date(t.getFullYear(), 0, 1));
-                    currentTo = formatYMD(new Date(t.getFullYear(), 11, 31));
-                    updateDateLabel();
-                    refreshDashboard();
-                    updateArrowDisabledState();
-                }
-            }
-            
-            function shiftDateRange(dir) {
-                if (refreshInProgress) return;
-                if (currentPresetType === 'custom') { showError("Custom range cannot be shifted. Select a preset."); return; }
-                const delta = dir === 'left' ? -1 : 1;
-                if (delta === 1) { const nextRange = getAdjacentRange('next'); if (nextRange && isFutureDate(nextRange.from)) { showError("Cannot go beyond today's date."); return; } }
-                if (currentPresetType === 'day') {
-                    if (!currentDayDate) currentDayDate = new Date();
-                    let nd = new Date(currentDayDate);
-                    nd.setDate(currentDayDate.getDate() + delta);
-                    const newYMD = formatYMD(nd);
-                    if (delta === 1 && isFutureDate(newYMD)) { showError("No future data."); return; }
-                    currentDayDate = nd;
-                    currentFrom = newYMD;
-                    currentTo = currentFrom;
-                    updateDateLabel();
-                    refreshDashboard();
-                    updateArrowDisabledState();
-                    return;
-                }
-                if (currentPresetType === 'week') {
-                    let start = parseYMD(currentFrom);
-                    if (isNaN(start)) start = getWeekStart(new Date());
-                    let ns = new Date(start);
-                    ns.setDate(start.getDate() + delta * 7);
-                    let ne = new Date(ns);
-                    ne.setDate(ns.getDate() + 6);
-                    const newFromStr = formatYMD(ns);
-                    if (delta === 1 && isFutureDate(newFromStr)) { showError("Cannot shift week into future."); return; }
-                    currentFrom = newFromStr;
-                    currentTo = formatYMD(ne);
-                    updateDateLabel();
-                    refreshDashboard();
-                    updateArrowDisabledState();
-                    return;
-                }
-                if (currentPresetType === 'month') {
-                    let start = parseYMD(currentFrom);
-                    let ns = new Date(start);
-                    ns.setMonth(start.getMonth() + delta);
-                    let ne = new Date(ns.getFullYear(), ns.getMonth() + 1, 0);
-                    const newFromStr = formatYMD(ns);
-                    if (delta === 1 && isFutureDate(newFromStr)) { showError("Cannot shift month into future."); return; }
-                    currentFrom = newFromStr;
-                    currentTo = formatYMD(ne);
-                    updateDateLabel();
-                    refreshDashboard();
-                    updateArrowDisabledState();
-                    return;
-                }
-                if (currentPresetType === 'year') {
-                    let start = parseYMD(currentFrom);
-                    let ny = start.getFullYear() + delta;
-                    let ns = new Date(ny, 0, 1);
-                    const newFromStr = formatYMD(ns);
-                    if (delta === 1 && isFutureDate(newFromStr)) { showError("Cannot shift year into future."); return; }
-                    currentFrom = newFromStr;
-                    currentTo = formatYMD(new Date(ny, 11, 31));
-                    updateDateLabel();
-                    refreshDashboard();
-                    updateArrowDisabledState();
-                }
-            }
-            
-            async function fetchApi(a,s,f,t,sig) {
-                const c = getCached(a,s,f,t);
-                if (c) return c;
-                const url = `${BACKEND_URL}?action=${a}&store=${s}&from=${f}&to=${t}&employeeId=all`;
-                const res = await fetch(url, { method: 'GET', signal: sig });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const d = await res.json();
-                if (d && d.success === false) throw new Error(d.error || "API error");
-                setCache(a,s,f,t,d);
-                return d;
-            }
-            
-            async function fetchAllData(s,f,t,sig) {
-                const [sales, chart, employees] = await Promise.all([
-                    fetchApi('getSalesReport', s, f, t, sig),
-                    fetchApi('getSalesChartData', s, f, t, sig),
-                    fetchApi('getEmployeeSalesData', s, f, t, sig)
-                ]);
-                return { sales, chart, employees };
-            }
-            
-            async function fetchAllEmployees() {
-                try {
-                    const url = `${POS_BACKEND_URL}?action=getEmployees`;
-                    const response = await fetch(url);
-                    const result = await response.json();
-                    if (result.success && result.employees) {
-                        allEmployeesList = result.employees.map(emp => ({ id: emp.id, name: emp.name }));
-                    } else { allEmployeesList = []; }
-                } catch (err) { allEmployeesList = []; }
-            }
+            let chartRenderTimeout = null;
             
             function renderChartWithData(chartData) {
-                const ctx = document.getElementById('trendChart').getContext('2d');
-                if (trendChart) trendChart.destroy();
-                let labels = [], vals = [];
-                if (chartData && chartData.type === 'hourly' && chartData.hourly) {
-                    labels = chartData.hourly.labels;
-                    vals = chartData.hourly.data;
-                } else if (chartData && chartData.salesByDay) {
-                    labels = chartData.salesByDay.labels;
-                    vals = chartData.salesByDay.data;
+                if (chartRenderTimeout) {
+                    clearTimeout(chartRenderTimeout);
                 }
-                trendChart = new Chart(ctx, {
-                    type: currentChartType,
-                    data: { labels, datasets: [{ label: 'Sales (RM)', data: vals, borderColor: '#2b6e9e', backgroundColor: currentChartType === 'bar' ? 'rgba(43,110,158,0.6)' : 'rgba(43,110,158,0.1)', borderWidth: 2, tension: 0.3, fill: currentChartType !== 'bar', pointRadius: currentChartType === 'line' ? 3 : 0 }] },
-                    options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `RM ${ctx.raw.toFixed(2)}` } } } }
-                });
+                chartRenderTimeout = setTimeout(() => {
+                    const ctx = document.getElementById('trendChart').getContext('2d');
+                    if (trendChart) trendChart.destroy();
+                    let labels = [], vals = [];
+                    if (chartData && chartData.type === 'hourly' && chartData.hourly) {
+                        labels = chartData.hourly.labels;
+                        vals = chartData.hourly.data;
+                    } else if (chartData && chartData.salesByDay) {
+                        labels = chartData.salesByDay.labels;
+                        vals = chartData.salesByDay.data;
+                    }
+                    if (labels.length > 0) {
+                        trendChart = new Chart(ctx, {
+                            type: currentChartType,
+                            data: { labels, datasets: [{ label: 'Sales (RM)', data: vals, borderColor: '#2b6e9e', backgroundColor: currentChartType === 'bar' ? 'rgba(43,110,158,0.6)' : 'rgba(43,110,158,0.1)', borderWidth: 2, tension: 0.3, fill: currentChartType !== 'bar', pointRadius: currentChartType === 'line' ? 3 : 0 }] },
+                            options: { responsive: true, maintainAspectRatio: true, plugins: { tooltip: { callbacks: { label: (ctx) => `RM ${ctx.raw.toFixed(2)}` } } } }
+                        });
+                    }
+                    chartRenderTimeout = null;
+                }, 50);
             }
-            
-            // ========== FIXED: UPDATE UI WITH ACCURATE PRODUCT BREAKDOWN ==========
+
+            // ----- UI Update -----
             function updateUI(data) {
                 const { sales, chart, employees } = data;
                 lastChartResponseData = chart;
@@ -1004,13 +1066,11 @@
                     h += '</tbody></table>';
                     staffDiv.innerHTML = h;
                 }
-                
-                // --- BUILD PRODUCT BREAKDOWN FROM RAW RECEIPTS ---
+
                 const breakdown = buildProductBreakdownFromReceipts(rawReceiptsData, productCategoryMap);
                 const productSalesTotal = breakdown.totalSales;
                 const salesTotal = sales.totalSales || 0;
                 
-                // --- Show status messages ---
                 const warningDiv = document.getElementById('productTotalWarning');
                 const successDiv = document.getElementById('productTotalSuccess');
                 const diff = Math.abs(productSalesTotal - salesTotal);
@@ -1025,8 +1085,7 @@
                     successDiv.style.display = 'block';
                     successDiv.innerHTML = `✅ <strong>Perfect Match!</strong> Product breakdown (RM ${productSalesTotal.toFixed(2)}) matches Total Sales. ${breakdown.freeItemCount} free item(s) excluded from revenue.`;
                 }
-                
-                // --- CATEGORY SALES ---
+
                 const catDiv = document.getElementById('categorySalesList');
                 const products = breakdown.products || [];
                 
@@ -1069,7 +1128,6 @@
                     catDiv.innerHTML = h;
                 }
 
-                // --- TOP PRODUCTS ---
                 const prodDiv = document.getElementById('productsList');
                 if (!products.length) { 
                     prodDiv.innerHTML = '<div>No product sales</div>'; 
@@ -1109,9 +1167,14 @@
                 renderChartWithData(chart);
                 hasData = true;
             }
-            
+
+            // ----- Refresh Dashboard -----
             async function refreshDashboard() {
-                if (refreshInProgress && currentAbortController) { currentAbortController.abort(); refreshBtn.classList.remove('refresh-spin'); refreshInProgress = false; }
+                if (refreshInProgress && currentAbortController) { 
+                    currentAbortController.abort(); 
+                    refreshBtn.classList.remove('refresh-spin'); 
+                    refreshInProgress = false; 
+                }
                 if (!currentFrom || !currentTo) return;
                 
                 refreshInProgress = true;
@@ -1122,9 +1185,11 @@
                 const signal = currentAbortController.signal;
                 
                 try {
-                    await fetchProductCategoryMap(currentStore);
-                    await fetchRawReceipts(currentStore, currentFrom, currentTo);
-                    const data = await fetchAllData(currentStore, currentFrom, currentTo, signal);
+                    const [categories, receipts, data] = await Promise.all([
+                        fetchProductCategoryMap(currentStore),
+                        fetchRawReceipts(currentStore, currentFrom, currentTo),
+                        fetchAllData(currentStore, currentFrom, currentTo, signal)
+                    ]);
                     updateUI(data);
                     lastLoadedFrom = currentFrom;
                     lastLoadedTo = currentTo;
@@ -1132,6 +1197,7 @@
                     triggerAdjacentPreload();
                     if (!initialPreloadDone) preloadCommonPresets();
                     updateArrowDisabledState();
+                    isInitialLoad = false;
                 } catch (err) {
                     if (err.name !== 'AbortError') showError(err.message);
                 } finally {
@@ -1140,11 +1206,19 @@
                     if (currentAbortController?.signal === signal) currentAbortController = null;
                 }
             }
+
+            function showError(msg) { 
+                errorDiv.innerText = msg; 
+                errorDiv.style.display = 'block'; 
+                setTimeout(() => errorDiv.style.display = 'none', 4000); 
+            }
             
-            function showError(msg) { errorDiv.innerText = msg; errorDiv.style.display = 'block'; setTimeout(() => errorDiv.style.display = 'none', 4000); }
-            function escapeHtml(s) { if (!s) return ''; return s.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
-            
-            // ---------- CSV report generation ----------
+            function escapeHtml(s) { 
+                if (!s) return ''; 
+                return s.replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); 
+            }
+
+            // ----- CSV/PDF generation functions -----
             function populateEmployeeDropdown() {
                 if (allEmployeesList.length === 0) {
                     reportEmployeeSelect.innerHTML = '<option value="all">👥 Loading employees...</option>';
@@ -1157,7 +1231,18 @@
                     allEmployeesList.forEach(emp => { const opt = document.createElement('option'); opt.value = emp.id; opt.textContent = emp.name; reportEmployeeSelect.appendChild(opt); });
                 }
             }
-            
+
+            async function fetchAllEmployees() {
+                try {
+                    const url = `${POS_BACKEND_URL}?action=getEmployees`;
+                    const response = await fetch(url);
+                    const result = await response.json();
+                    if (result.success && result.employees) {
+                        allEmployeesList = result.employees.map(emp => ({ id: emp.id, name: emp.name }));
+                    } else { allEmployeesList = []; }
+                } catch (err) { allEmployeesList = []; }
+            }
+
             let currentReportPreset = null, reportFrom = '', reportTo = '';
             function openReportModal() { populateEmployeeDropdown(); currentReportPreset = 'today'; const todayStr = getTodayYMD(); reportFrom = todayStr; reportTo = todayStr; reportModal.classList.add('active'); document.querySelectorAll('[data-report-preset]').forEach(btn => btn.style.backgroundColor = ''); const todayOption = document.querySelector('[data-report-preset="today"]'); if (todayOption) todayOption.style.backgroundColor = '#eef2ff'; document.getElementById('reportCustomRange').style.display = 'none'; }
             function closeReportDownloadModal() { reportModal.classList.remove('active'); }
@@ -1272,8 +1357,8 @@
                     loadingMsg.remove();
                 }
             }
-            
-            // ---------- STANDARD RECEIPT PDF ----------
+
+            // ----- Receipt PDF functions -----
             let currentReceiptStore = "queens";
             let currentReceiptStoreName = "Queensbay Mall";
             let currentReceiptPreset = "today";
@@ -1426,8 +1511,8 @@
                     loadingDiv.remove();
                 }
             }
-            
-            // ---------- IRS RECEIPT PDF ----------
+
+            // ----- IRS Receipt PDF functions -----
             let currentIrsStore = "queens";
             let currentIrsStoreName = "Queensbay Mall";
             let currentIrsPreset = "today";
@@ -1620,8 +1705,8 @@
                     loadingDiv.remove();
                 }
             }
-            
-            // ----- Event Listeners for Receipts -----
+
+            // ----- Event Listeners -----
             function openReceiptChoiceModal() { receiptChoiceModal.classList.add('active'); }
             function closeChoiceModalFunc() { receiptChoiceModal.classList.remove('active'); }
             receiptPdfBtn.addEventListener('click', openReceiptChoiceModal);
@@ -1688,14 +1773,13 @@
             });
             generateIrsPdfBtn.addEventListener('click', generateIrsReceiptPDF);
             
-            // ----- Original UI wiring -----
+            // ----- Main UI wiring -----
             downloadReportBtn.addEventListener('click', openReportModal);
             closeReportModalBtn.addEventListener('click', closeReportDownloadModal);
             generateReportBtn.addEventListener('click', generateCSVReport);
             document.querySelectorAll('[data-report-preset]').forEach(btn => { btn.addEventListener('click', () => { const preset = btn.getAttribute('data-report-preset'); setReportPreset(preset); }); });
             reportModal.addEventListener('click', (e) => { if (e.target === reportModal) closeReportDownloadModal(); });
             
-            // ========== FULL PRODUCT LIST DOWNLOAD ==========
             const downloadFullProductListBtn = document.getElementById('downloadFullProductListBtn');
             if (downloadFullProductListBtn) {
                 downloadFullProductListBtn.addEventListener('click', downloadFullProductList);
@@ -1703,10 +1787,12 @@
             
             const storeModal = document.getElementById('storeModal');
             const dateModal = document.getElementById('dateModal');
+            
             function openStoreModal() { storeModal.classList.add('active'); }
             function closeStoreModal() { storeModal.classList.remove('active'); }
             function openDateModal() { document.getElementById('customDateRange').style.display = 'none'; dateModal.classList.add('active'); }
             function closeDateModal() { dateModal.classList.remove('active'); }
+            
             function selectStore(storeKey, name) { 
                 currentStore = storeKey; 
                 currentStoreDisplay = name; 
@@ -1718,8 +1804,25 @@
                 rawReceiptsData = [];
                 refreshDashboard(); 
             }
-            function selectDatePreset(p) { if (p === 'custom') { document.getElementById('customDateRange').style.display = 'block'; return; } applyPreset(p); closeDateModal(); }
-            function applyCustomRange() { const from = document.getElementById('customFromDate').value, to = document.getElementById('customToDate').value; if (!from || !to) { showError("Select both dates"); return; } if (from > to) { showError("Invalid range"); return; } if (isFutureDate(from)) { showError("Cannot select future start date."); return; } applyPreset('custom', from, to); closeDateModal(); }
+            
+            function selectDatePreset(p) { 
+                if (p === 'custom') { 
+                    document.getElementById('customDateRange').style.display = 'block'; 
+                    return; 
+                } 
+                applyPreset(p); 
+                closeDateModal(); 
+            }
+            
+            function applyCustomRange() { 
+                const from = document.getElementById('customFromDate').value; 
+                const to = document.getElementById('customToDate').value; 
+                if (!from || !to) { showError("Select both dates"); return; } 
+                if (from > to) { showError("Invalid range"); return; } 
+                if (isFutureDate(from)) { showError("Cannot select future start date."); return; } 
+                applyPreset('custom', from, to); 
+                closeDateModal(); 
+            }
             
             refreshBtn.addEventListener('click', refreshDashboard);
             leftArrowBtn.addEventListener('click', () => shiftDateRange('left'));
@@ -1729,12 +1832,24 @@
             document.getElementById('closeStoreModal')?.addEventListener('click', closeStoreModal);
             document.getElementById('closeDateModal')?.addEventListener('click', closeDateModal);
             document.querySelectorAll('#storeModal .store-option').forEach(opt => opt.addEventListener('click', () => selectStore(opt.dataset.store, opt.dataset.name)));
-            document.querySelectorAll('#dateModal .preset-option').forEach(opt => { if (opt.dataset.preset !== 'custom') opt.addEventListener('click', () => selectDatePreset(opt.dataset.preset)); else opt.addEventListener('click', () => selectDatePreset('custom')); });
+            document.querySelectorAll('#dateModal .preset-option').forEach(opt => { 
+                if (opt.dataset.preset !== 'custom') {
+                    opt.addEventListener('click', () => selectDatePreset(opt.dataset.preset));
+                } else {
+                    opt.addEventListener('click', () => selectDatePreset('custom'));
+                }
+            });
             document.getElementById('applyCustomBtn')?.addEventListener('click', applyCustomRange);
             if (storeModal) storeModal.addEventListener('click', (e) => { if (e.target === storeModal) closeStoreModal(); });
             if (dateModal) dateModal.addEventListener('click', (e) => { if (e.target === dateModal) closeDateModal(); });
             
-            document.querySelectorAll('.toggle-btn').forEach(btn => btn.addEventListener('click', () => { document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentChartType = btn.getAttribute('data-chart-type'); if (lastChartResponseData) renderChartWithData(lastChartResponseData); else if (trendChart && trendChart.data) renderChartWithData({ salesByDay: { labels: trendChart.data.labels, data: trendChart.data.datasets[0].data } }); }));
+            document.querySelectorAll('.toggle-btn').forEach(btn => btn.addEventListener('click', () => { 
+                document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active')); 
+                btn.classList.add('active'); 
+                currentChartType = btn.getAttribute('data-chart-type'); 
+                if (lastChartResponseData) renderChartWithData(lastChartResponseData); 
+                else if (trendChart && trendChart.data) renderChartWithData({ salesByDay: { labels: trendChart.data.labels, data: trendChart.data.datasets[0].data } }); 
+            }));
             
             // ---- Initial Load ----
             fetchAllEmployees();
@@ -1746,9 +1861,7 @@
             updateDateLabel();
             storeNameSpan.innerText = "Queensbay Mall";
             
-            fetchProductCategoryMap(currentStore).then(() => {
-                refreshDashboard();
-            });
+            refreshDashboard();
         });
     })();
 </script>
