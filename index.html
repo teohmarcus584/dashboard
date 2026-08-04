@@ -201,9 +201,9 @@
         <span class="badge-dot" id="cacheBadge"></span>
     </button>
     <div class="date-control">
-        <button class="arrow-btn" id="leftArrowBtn" disabled>←</button>
+        <button class="arrow-btn" id="leftArrowBtn">←</button>
         <button class="date-trigger-btn" id="dateTriggerBtn">📅 <span class="date-range-label" id="dateRangeLabel">Today</span></button>
-        <button class="arrow-btn" id="rightArrowBtn" disabled>→</button>
+        <button class="arrow-btn" id="rightArrowBtn">→</button>
     </div>
     <button class="store-selector-btn" id="storeSelectorBtn">
         <span>🏬</span>
@@ -541,7 +541,9 @@
         function formatMYR(v) { return `RM ${(v || 0).toFixed(2)}`; }
         function formatNumber(v) { return (parseInt(v) || 0).toLocaleString(); }
         
-        function isFutureDate(ymd) { return ymd > TODAY_YMD; }
+        function isFutureDate(ymd) { 
+            return ymd > TODAY_YMD; 
+        }
         function isTodayDate(ymd) { return ymd === TODAY_YMD; }
         
         function escapeHtml(s) { 
@@ -641,15 +643,30 @@
         
         function updateArrowDisabledState() {
             if (!leftArrowBtn || !rightArrowBtn) return;
+            
+            const todayStr = getTodayYMD();
+            
+            // For custom range, always disable right arrow, left arrow can be used
             if (currentPresetType === 'custom') { 
                 rightArrowBtn.disabled = true; 
                 leftArrowBtn.disabled = false;
                 return; 
             }
+            
+            // Get the next and previous ranges
             let nextRange = getAdjacentRange('next');
             let prevRange = getAdjacentRange('prev');
+            
+            // Right arrow: disabled if no next range OR next range starts in the future
             rightArrowBtn.disabled = !nextRange || isFutureDate(nextRange.from);
+            
+            // Left arrow: disabled only if no previous range exists
             leftArrowBtn.disabled = !prevRange;
+            
+            // EXTRA SAFETY: If we're on today, right arrow must be disabled
+            if (currentPresetType === 'day' && currentFrom === todayStr) {
+                rightArrowBtn.disabled = true;
+            }
         }
         
         function getAdjacentRange(dir) {
@@ -993,6 +1010,9 @@
                     cacheBadge.className = 'badge-dot loading';
                 }
             }
+            
+            // Update arrow states after UI update
+            updateArrowDisabledState();
         }
         
         // ----- UPDATE VIEW -----
@@ -1326,9 +1346,18 @@
         
         function shiftDateRange(dir) {
             if (refreshInProgress) return;
-            if (currentPresetType === 'custom') { showError("Custom range cannot be shifted. Select a preset."); return; }
+            if (currentPresetType === 'custom') { 
+                showError("Custom range cannot be shifted. Select a preset."); 
+                return; 
+            }
+            
             const delta = dir === 'left' ? -1 : 1;
-            if (delta === 1) { const nextRange = getAdjacentRange('next'); if (nextRange && isFutureDate(nextRange.from)) { showError("Cannot go beyond today's date."); return; } }
+            const nextRange = getAdjacentRange('next');
+            
+            if (delta === 1 && nextRange && isFutureDate(nextRange.from)) { 
+                showError("Cannot go beyond today's date."); 
+                return; 
+            }
             
             if (currentPresetType === 'day') {
                 if (!currentDayDate) currentDayDate = new Date();
@@ -1728,6 +1757,11 @@
             
             // ---- FETCH EMPLOYEES ----
             fetchAllEmployees();
+            
+            // ---- INITIAL ARROW STATE ----
+            setTimeout(() => {
+                updateArrowDisabledState();
+            }, 300);
         });
         
         // ----- MODAL FUNCTIONS (defined after DOM ready) -----
