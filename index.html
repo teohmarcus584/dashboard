@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -44,7 +45,6 @@
         .refresh-icon .badge-dot.active { display: block; }
         .refresh-icon .badge-dot.loading { background: #f59e0b; animation: pulse-dot 1s ease-in-out infinite; }
         .refresh-icon .badge-dot.cached { background: #3b82f6; }
-        .refresh-icon .badge-dot.has-update { background: #f59e0b; animation: pulse-dot 0.5s ease-in-out infinite; }
         @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         
         .store-selector-btn {
@@ -175,7 +175,6 @@
         .data-freshness.loading { background: #fef3c7; color: #92400e; animation: pulse-dot 1s ease-in-out infinite; }
         .data-freshness.priority { background: #dbeafe; color: #1e4668; animation: pulse-dot 0.8s ease-in-out infinite; }
         .data-freshness.updating { background: #fef3c7; color: #92400e; animation: pulse-dot 1s ease-in-out infinite; }
-        .data-freshness.checking { background: #fef3c7; color: #92400e; animation: pulse-dot 0.5s ease-in-out infinite; }
         
         .date-range-display {
             font-size: 0.8rem;
@@ -197,24 +196,31 @@
 
         /* Progress Bar Styles */
         .progress-container {
-            margin: 8px 0 12px 0;
-            background: #e9edf2;
+            width: 100%;
+            background: #f0f3f9;
             border-radius: 20px;
+            margin: 8px 0 12px 0;
             overflow: hidden;
-            height: 20px;
-            position: relative;
             display: none;
+            height: 24px;
+            position: relative;
         }
         .progress-container.active {
             display: block;
         }
         .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, #2b6e9e, #4a90c4);
+            background: linear-gradient(90deg, #2b6e9e, #4a90b9);
             border-radius: 20px;
-            transition: width 0.3s ease;
             width: 0%;
-            position: relative;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: white;
+            font-weight: 600;
+            min-width: 30px;
         }
         .progress-bar.complete {
             background: linear-gradient(90deg, #10b981, #34d399);
@@ -222,45 +228,16 @@
         .progress-bar.error {
             background: linear-gradient(90deg, #ef4444, #f87171);
         }
-        .progress-text {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: #1a2634;
-            z-index: 1;
-            white-space: nowrap;
-        }
-        .progress-container .progress-label {
-            position: absolute;
-            top: 50%;
-            left: 12px;
-            transform: translateY(-50%);
-            font-size: 0.65rem;
-            font-weight: 600;
+        .progress-label {
+            font-size: 0.75rem;
             color: #4a627a;
-            z-index: 1;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
         }
-
-        .update-notice {
-            background: #fef3c7;
-            border-radius: 20px;
-            padding: 6px 14px;
-            font-size: 0.7rem;
-            color: #92400e;
-            display: none;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            border: 1px solid #f59e0b;
-        }
-        .update-notice.visible {
-            display: inline-flex;
-        }
-        .update-notice:hover {
-            background: #fde68a;
+        .progress-label .status-text {
+            font-weight: 600;
+            color: #1a2c42;
         }
     </style>
 </head>
@@ -271,9 +248,9 @@
         <span class="badge-dot" id="cacheBadge"></span>
     </button>
     <div class="date-control">
-        <button class="arrow-btn" id="leftArrowBtn">←</button>
+        <button class="arrow-btn" id="leftArrowBtn" disabled>←</button>
         <button class="date-trigger-btn" id="dateTriggerBtn">📅 <span class="date-range-label" id="dateRangeLabel">Today</span></button>
-        <button class="arrow-btn" id="rightArrowBtn">→</button>
+        <button class="arrow-btn" id="rightArrowBtn" disabled>→</button>
     </div>
     <button class="store-selector-btn" id="storeSelectorBtn">
         <span>🏬</span>
@@ -285,19 +262,17 @@
     <div id="errorMsg" class="error-toast"></div>
     <div id="successMsg" class="success-toast"></div>
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
-        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-            <span class="data-freshness" id="dataFreshness">Loading...</span>
-            <span class="update-notice" id="updateNotice">🔄 New data available - Click to refresh</span>
-        </div>
+        <span class="data-freshness" id="dataFreshness">Loading...</span>
         <span class="date-range-display">📊 Showing: <span id="displayDateRange">Today</span></span>
     </div>
     
-    <!-- Progress Bar for Loading -->
+    <!-- Progress Bar -->
     <div class="progress-container" id="progressContainer">
-        <div class="progress-bar" id="progressBar">
-            <span class="progress-label" id="progressLabel">Loading...</span>
-            <span class="progress-text" id="progressText">0%</span>
+        <div class="progress-label">
+            <span id="progressTitle">Loading data...</span>
+            <span class="status-text" id="progressStatus">0%</span>
         </div>
+        <div class="progress-bar" id="progressBar" style="width: 0%;">0%</div>
     </div>
     
     <div class="kpi-grid">
@@ -464,19 +439,24 @@
         const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxPfPCmGXDDDakhgXVAr1wGKnqaVzWE3eAUYMBJtzT8WCYj3peHeXGbJD00RX7jqLl8LQ/exec";
         const POS_BACKEND_URL = "https://script.google.com/macros/s/AKfycbxPfPCmGXDDDakhgXVAr1wGKnqaVzWE3eAUYMBJtzT8WCYj3peHeXGbJD00RX7jqLl8LQ/exec";
         const CACHE_KEY = 'sales_dashboard_cache';
-        const CACHE_VERSION = 'v4';
+        const CACHE_VERSION = 'v3';
         
         // --- MASTER DATA CACHE ---
         let masterData = {};
         const STORE_KEYS = ['all', 'queens', 'sunshine', 'gurney_paragon'];
         const INDIVIDUAL_STORES = ['queens', 'sunshine', 'gurney_paragon'];
+        const STORE_DISPLAY_NAMES = {
+            'queens': 'Queensbay Mall',
+            'sunshine': 'Sunshine Central',
+            'gurney_paragon': 'Gurney Paragon',
+            'all': 'All Stores'
+        };
         let cacheLoaded = false;
-        let isInitialLoad = true;
-        let loadingProgress = 0;
-        let totalLoadingSteps = 0;
-        let completedLoadingSteps = 0;
-        let lastDataCheck = 0;
-        let hasPendingUpdates = false;
+        
+        // Progress tracking
+        let progressTotal = 0;
+        let progressCurrent = 0;
+        let progressInterval = null;
         
         function getCacheKey() {
             return `${CACHE_KEY}_${CACHE_VERSION}`;
@@ -493,9 +473,6 @@
                     allEmployeesList: allEmployeesList
                 };
                 localStorage.setItem(getCacheKey(), JSON.stringify(cacheData));
-                hasPendingUpdates = false;
-                const notice = document.getElementById('updateNotice');
-                if (notice) notice.classList.remove('visible');
             } catch (e) {
                 console.warn('Failed to save cache:', e);
             }
@@ -571,130 +548,89 @@
         }
         
         // ----- PROGRESS BAR -----
-        function updateProgress(step, total, label) {
+        function showProgress(title, total) {
             const container = document.getElementById('progressContainer');
             const bar = document.getElementById('progressBar');
-            const text = document.getElementById('progressText');
-            const labelEl = document.getElementById('progressLabel');
+            const status = document.getElementById('progressStatus');
+            const titleEl = document.getElementById('progressTitle');
             
-            if (!container || !bar || !text || !labelEl) return;
+            if (!container || !bar) return;
+            
+            progressTotal = total || 100;
+            progressCurrent = 0;
             
             container.classList.add('active');
-            const percent = Math.min(100, Math.round((step / total) * 100));
-            bar.style.width = percent + '%';
-            text.textContent = percent + '%';
-            labelEl.textContent = label || 'Loading...';
+            bar.style.width = '0%';
+            bar.textContent = '0%';
+            bar.className = 'progress-bar';
+            status.textContent = '0%';
+            titleEl.textContent = title || 'Loading...';
             
-            if (percent >= 100) {
-                bar.classList.add('complete');
-                setTimeout(() => {
-                    container.classList.remove('active');
-                    bar.classList.remove('complete');
-                }, 1000);
-            }
+            // Animate progress
+            if (progressInterval) clearInterval(progressInterval);
+            progressInterval = setInterval(() => {
+                if (progressCurrent < progressTotal) {
+                    progressCurrent += 1;
+                    const pct = Math.min(Math.round((progressCurrent / progressTotal) * 100), 99);
+                    bar.style.width = pct + '%';
+                    bar.textContent = pct + '%';
+                    status.textContent = pct + '%';
+                }
+            }, 50);
         }
         
-        function showProgress(label, percent) {
-            const container = document.getElementById('progressContainer');
+        function updateProgress(current, total, label) {
             const bar = document.getElementById('progressBar');
-            const text = document.getElementById('progressText');
-            const labelEl = document.getElementById('progressLabel');
+            const status = document.getElementById('progressStatus');
+            const titleEl = document.getElementById('progressTitle');
             
-            if (!container || !bar || !text || !labelEl) return;
+            if (!bar) return;
             
-            container.classList.add('active');
-            const pct = Math.min(100, Math.max(0, percent));
+            progressCurrent = current || progressCurrent;
+            progressTotal = total || progressTotal;
+            
+            const pct = Math.min(Math.round((progressCurrent / progressTotal) * 100), 100);
             bar.style.width = pct + '%';
-            text.textContent = pct + '%';
-            labelEl.textContent = label || 'Loading...';
+            bar.textContent = pct + '%';
+            if (status) status.textContent = pct + '%';
+            if (label && titleEl) titleEl.textContent = label;
             
             if (pct >= 100) {
-                bar.classList.add('complete');
+                bar.className = 'progress-bar complete';
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
                 setTimeout(() => {
-                    container.classList.remove('active');
-                    bar.classList.remove('complete');
-                }, 1000);
+                    const container = document.getElementById('progressContainer');
+                    if (container) container.classList.remove('active');
+                }, 1500);
             }
         }
         
         function hideProgress() {
             const container = document.getElementById('progressContainer');
-            if (container) {
-                container.classList.remove('active');
+            if (container) container.classList.remove('active');
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
             }
         }
         
-        // ----- COMBINE DATA FOR "ALL STORES" -----
-        function combineAllStoresData() {
-            const allStoreData = masterData['all'];
-            if (!allStoreData) return;
-            
-            // Check if any individual stores have data
-            let hasAnyData = false;
-            let allLoaded = true;
-            let allPriorityLoaded = true;
-            
-            INDIVIDUAL_STORES.forEach(store => {
-                const sData = masterData[store];
-                if (sData) {
-                    if (sData.loaded) hasAnyData = true;
-                    if (sData._priorityLoaded) hasAnyData = true;
-                    if (!sData.loaded) allLoaded = false;
-                    if (!sData._priorityLoaded) allPriorityLoaded = false;
-                }
-            });
-            
-            if (!hasAnyData) return;
-            
-            // Combine receipts from all stores
-            let allReceipts = [];
-            let allPriorityReceipts = [];
-            let combinedCategories = {};
-            
-            INDIVIDUAL_STORES.forEach(store => {
-                const storeData = masterData[store];
-                if (storeData) {
-                    if (storeData.receipts && storeData.receipts.length > 0) {
-                        allReceipts = allReceipts.concat(storeData.receipts);
-                    }
-                    if (storeData._priorityReceipts && storeData._priorityReceipts.length > 0) {
-                        allPriorityReceipts = allPriorityReceipts.concat(storeData._priorityReceipts);
-                    }
-                    if (storeData._priorityCategories) {
-                        combinedCategories = { ...combinedCategories, ...storeData._priorityCategories };
-                    }
-                    if (storeData.productMap) {
-                        combinedCategories = { ...combinedCategories, ...storeData.productMap };
-                    }
-                }
-            });
-            
-            // Update 'all' store data
-            if (allReceipts.length > 0) {
-                allStoreData.receipts = allReceipts;
+        function setProgressError(message) {
+            const bar = document.getElementById('progressBar');
+            const status = document.getElementById('progressStatus');
+            const titleEl = document.getElementById('progressTitle');
+            if (bar) {
+                bar.className = 'progress-bar error';
+                bar.style.width = '100%';
+                bar.textContent = '❌ Error';
             }
-            if (allPriorityReceipts.length > 0) {
-                allStoreData._priorityReceipts = allPriorityReceipts;
-            }
-            if (Object.keys(combinedCategories).length > 0) {
-                allStoreData._priorityCategories = combinedCategories;
-                allStoreData.productMap = combinedCategories;
-            }
-            
-            // Mark as loaded if all individual stores are loaded
-            if (allLoaded) {
-                allStoreData.loaded = true;
-                allStoreData._lastUpdated = Date.now();
-            }
-            if (allPriorityLoaded) {
-                allStoreData._priorityLoaded = true;
-            }
-            
-            // If this is the current store, update view
-            if (currentStore === 'all') {
-                productCategoryMap = combinedCategories;
-                rawReceiptsData = allReceipts.length > 0 ? allReceipts : allPriorityReceipts;
-                updateView(false);
+            if (status) status.textContent = 'Error';
+            if (titleEl) titleEl.textContent = message || 'Loading failed';
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
             }
         }
         
@@ -708,21 +644,16 @@
         let productCategoryMap = {};
         let rawReceiptsData = [];
         let trendChart = null;
-        let lastChartResponseData = null;
+        let lastChartData = null;
         let isDataLoaded = false;
         let refreshInProgress = false;
         let backgroundLoadInProgress = false;
-        let dataUpdateNeeded = false;
-        let totalStoresToLoad = INDIVIDUAL_STORES.length;
-        let storesLoaded = 0;
-        let isCheckingForUpdates = false;
         
-        // ----- DOM elements (will be initialized after DOM ready) -----
+        // ----- DOM elements -----
         let refreshBtn, leftArrowBtn, rightArrowBtn, dateTriggerBtn, storeSelectorBtn;
         let storeNameSpan, dateRangeLabelSpan, displayDateRangeSpan;
         let errorDiv, successDiv, downloadReportBtn, reportModal, closeReportModalBtn, generateReportBtn, reportEmployeeSelect;
-        let productsContainer, categoryContainer, productTotalWarning, productTotalSuccess;
-        let dataFreshness, cacheBadge, updateNotice;
+        let dataFreshness, cacheBadge;
         let receiptPdfBtn, receiptPdfModal, closeReceiptModal, generateReceiptPdfBtn, receiptEmployeeSelect;
         let receiptStoreLabelSpan, receiptStoreSelectorPanel, receiptStoreOptionTrigger;
         let receiptChoiceModal, choiceStandard, choiceIRS, closeChoiceModal;
@@ -839,61 +770,6 @@
             } catch (err) { allEmployeesList = []; return allEmployeesList; }
         }
         
-        // ----- CHECK FOR NEW DATA -----
-        async function checkForUpdates() {
-            if (isCheckingForUpdates) return;
-            isCheckingForUpdates = true;
-            
-            try {
-                const todayStr = getTodayYMD();
-                let hasNewData = false;
-                
-                // Check each store for new data
-                for (const store of INDIVIDUAL_STORES) {
-                    const storeData = masterData[store];
-                    if (!storeData) continue;
-                    
-                    // Fetch latest receipts for today
-                    const latestReceipts = await fetchRawReceipts(store, todayStr, todayStr);
-                    
-                    // Compare with cached priority receipts
-                    const cachedReceipts = storeData._priorityReceipts || [];
-                    
-                    // Check if there are new transactions
-                    if (latestReceipts.length > cachedReceipts.length) {
-                        hasNewData = true;
-                        break;
-                    }
-                    
-                    // Also check if any receipt IDs are new
-                    const cachedIds = new Set(cachedReceipts.map(r => r.transaction_id || r.id));
-                    for (const receipt of latestReceipts) {
-                        const id = receipt.transaction_id || receipt.id;
-                        if (id && !cachedIds.has(id)) {
-                            hasNewData = true;
-                            break;
-                        }
-                    }
-                    if (hasNewData) break;
-                }
-                
-                if (hasNewData) {
-                    hasPendingUpdates = true;
-                    if (updateNotice) {
-                        updateNotice.classList.add('visible');
-                        updateNotice.textContent = '🔄 New transactions found - Click to refresh';
-                    }
-                    if (cacheBadge) {
-                        cacheBadge.className = 'badge-dot has-update';
-                    }
-                }
-            } catch (err) {
-                console.warn('Failed to check for updates:', err);
-            } finally {
-                isCheckingForUpdates = false;
-            }
-        }
-        
         function updateDateLabel() {
             if (!dateRangeLabelSpan || !displayDateRangeSpan) return;
             let label = '';
@@ -918,19 +794,15 @@
         
         function updateArrowDisabledState() {
             if (!leftArrowBtn || !rightArrowBtn) return;
-            
-            // Always enable left arrow (can always go back)
-            leftArrowBtn.disabled = false;
-            
-            // For custom range, disable right arrow
             if (currentPresetType === 'custom') { 
                 rightArrowBtn.disabled = true; 
+                leftArrowBtn.disabled = false;
                 return; 
             }
-            
-            // Check if we can go forward
             let nextRange = getAdjacentRange('next');
+            let prevRange = getAdjacentRange('prev');
             rightArrowBtn.disabled = !nextRange || isFutureDate(nextRange.from);
+            leftArrowBtn.disabled = !prevRange;
         }
         
         function getAdjacentRange(dir) {
@@ -1087,106 +959,83 @@
                 const ctx = document.getElementById('trendChart');
                 if (!ctx) return;
                 const context = ctx.getContext('2d');
-                if (trendChart) trendChart.destroy();
+                if (trendChart) {
+                    trendChart.destroy();
+                    trendChart = null;
+                }
+                
                 let labels = [], vals = [];
                 if (chartData && chartData.salesByDay) {
-                    labels = chartData.salesByDay.labels;
-                    vals = chartData.salesByDay.data;
+                    labels = chartData.salesByDay.labels || [];
+                    vals = chartData.salesByDay.data || [];
                 }
-                if (labels.length > 0) {
-                    // Check if we're showing today - use hourly data
-                    const isToday = labels.length === 1 && isTodayDate(labels[0]);
-                    let displayLabels = labels;
-                    let displayVals = vals;
-                    
-                    if (isToday && chartData.hourlyData) {
-                        // Use hourly data for today
-                        displayLabels = chartData.hourlyData.labels;
-                        displayVals = chartData.hourlyData.data;
-                    } else if (labels.length > 31) {
-                        // Aggregate by week
-                        const weeklyData = {};
-                        labels.forEach((label, index) => {
-                            const date = new Date(label);
-                            const weekKey = getWeekStart(date).toISOString().split('T')[0];
-                            if (!weeklyData[weekKey]) {
-                                weeklyData[weekKey] = { total: 0, count: 0 };
-                            }
-                            weeklyData[weekKey].total += vals[index];
-                            weeklyData[weekKey].count += 1;
-                        });
-                        const sortedWeeks = Object.keys(weeklyData).sort();
-                        displayLabels = sortedWeeks.map(w => `Week of ${w}`);
-                        displayVals = sortedWeeks.map(w => weeklyData[w].total);
-                    } else {
-                        // Show daily with formatted dates
-                        displayLabels = labels.map(d => {
-                            const date = new Date(d);
-                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        });
-                        displayVals = vals;
-                    }
-                    
-                    const isBar = currentChartType === 'bar';
-                    trendChart = new Chart(context, {
-                        type: currentChartType,
-                        data: { 
-                            labels: displayLabels, 
-                            datasets: [{ 
-                                label: 'Sales (RM)', 
-                                data: displayVals, 
-                                borderColor: '#2b6e9e', 
-                                backgroundColor: isBar ? 'rgba(43,110,158,0.7)' : 'rgba(43,110,158,0.1)', 
-                                borderWidth: 2, 
-                                tension: 0.3, 
-                                fill: !isBar,
-                                pointRadius: isBar ? 0 : 3,
-                                pointBackgroundColor: '#2b6e9e',
-                                barPercentage: 0.6,
-                                categoryPercentage: 0.8
-                            }] 
-                        },
-                        options: { 
-                            responsive: true, 
-                            maintainAspectRatio: true,
-                            plugins: { 
-                                tooltip: { 
-                                    callbacks: { 
-                                        label: (ctx) => `RM ${ctx.raw.toFixed(2)}` 
-                                    } 
-                                },
-                                legend: {
-                                    display: true,
-                                    labels: {
-                                        font: { size: 11 }
-                                    }
-                                }
+                
+                // If no data, show empty chart
+                if (!labels || labels.length === 0) {
+                    labels = ['No Data'];
+                    vals = [0];
+                }
+                
+                // Ensure we have valid data
+                const validLabels = labels.filter((_, i) => vals[i] !== undefined && vals[i] !== null);
+                const validVals = vals.filter(v => v !== undefined && v !== null);
+                
+                if (validLabels.length === 0) {
+                    validLabels.push('No Data');
+                    validVals.push(0);
+                }
+                
+                trendChart = new Chart(context, {
+                    type: currentChartType,
+                    data: { 
+                        labels: validLabels, 
+                        datasets: [{ 
+                            label: 'Sales (RM)', 
+                            data: validVals, 
+                            borderColor: '#2b6e9e', 
+                            backgroundColor: currentChartType === 'bar' ? 'rgba(43,110,158,0.6)' : 'rgba(43,110,158,0.1)', 
+                            borderWidth: 2, 
+                            tension: 0.3, 
+                            fill: currentChartType !== 'bar', 
+                            pointRadius: currentChartType === 'line' ? 4 : 0,
+                            pointBackgroundColor: '#2b6e9e'
+                        }] 
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: true,
+                        plugins: { 
+                            tooltip: { 
+                                callbacks: { 
+                                    label: (ctx) => `RM ${ctx.raw.toFixed(2)}` 
+                                } 
                             },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    ticks: {
-                                        callback: (value) => `RM ${value.toFixed(0)}`
-                                    }
-                                },
-                                x: {
-                                    grid: {
-                                        display: false
-                                    }
+                            legend: {
+                                display: true,
+                                labels: {
+                                    font: { size: 11 }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: (value) => 'RM ' + value.toFixed(0)
                                 }
                             }
                         }
-                    });
-                }
+                    }
+                });
                 chartRenderTimeout = null;
-            }, 50);
+            }, 100);
         }
         
         // ----- UPDATE UI -----
         function updateUI(data, receipts, isCached) {
             if (!data) return;
             const { sales, chart, employees } = data;
-            lastChartResponseData = chart;
+            lastChartData = chart;
             
             const totalSalesEl = document.getElementById('totalSales');
             const txnCountEl = document.getElementById('txnCount');
@@ -1213,15 +1062,12 @@
             const staffDiv = document.getElementById('staffSalesList');
             if (staffDiv) {
                 if (!employees.labels || !employees.labels.length) { 
-                    staffDiv.innerHTML = '<div>No staff sales data</div>'; 
+                    staffDiv.innerHTML = '<div style="padding:12px; color:#6c86a3;">No staff sales data</div>'; 
                 } else {
-                    // Sort staff by sales descending
-                    const sorted = employees.labels.map((label, i) => ({ label, value: employees.data[i] }))
-                        .sort((a, b) => b.value - a.value);
                     let h = '<table class="mini-table"><thead><tr><th>Staff</th><th>Sales (RM)</th></tr></thead><tbody>';
-                    sorted.forEach(({ label, value }) => {
-                        h += `<tr><td><strong>${escapeHtml(label)}</strong></td><td>${formatMYR(value)}</td></tr>`;
-                    });
+                    for (let i = 0; i < employees.labels.length; i++) {
+                        h += `<tr><td><strong>${escapeHtml(employees.labels[i])}</strong></td><td>${formatMYR(employees.data[i])}</td></tr>`;
+                    }
                     h += '</tbody></table>';
                     staffDiv.innerHTML = h;
                 }
@@ -1255,7 +1101,7 @@
             
             if (catDiv) {
                 if (!products.length) { 
-                    catDiv.innerHTML = '<div>No category data</div>'; 
+                    catDiv.innerHTML = '<div style="padding:12px; color:#6c86a3;">No category data</div>'; 
                 } else {
                     const rev = new Map(), qty = new Map(), paidQty = new Map(), freeQty = new Map();
                     
@@ -1298,7 +1144,7 @@
             const prodDiv = document.getElementById('productsList');
             if (prodDiv) {
                 if (!products.length) { 
-                    prodDiv.innerHTML = '<div>No product sales</div>'; 
+                    prodDiv.innerHTML = '<div style="padding:12px; color:#6c86a3;">No product sales</div>'; 
                 } else {
                     const allProducts = [...products].sort((a,b) => (b.totalRevenue || 0) - (a.totalRevenue || 0));
                     let h = '<table class="mini-table"><thead><tr><th>Product</th><th>Category</th><th>Qty</th><th>Paid</th><th>Free</th><th>Revenue (RM)</th></tr></thead><tbody>';
@@ -1332,6 +1178,7 @@
                 }
             }
             
+            // Render chart with proper data
             renderChartWithData(chart);
             
             // Update freshness indicator
@@ -1355,9 +1202,73 @@
                     cacheBadge.className = 'badge-dot loading';
                 }
             }
+        }
+        
+        // ----- COMBINE DATA FOR "ALL STORES" -----
+        function combineAllStoresData(forceRefresh) {
+            const allStoreData = masterData['all'];
+            if (!allStoreData) return;
             
-            // Hide progress when done
-            hideProgress();
+            // Check if all individual stores are loaded
+            const allLoaded = INDIVIDUAL_STORES.every(store => masterData[store] && masterData[store].loaded);
+            const allPriorityLoaded = INDIVIDUAL_STORES.every(store => masterData[store] && masterData[store]._priorityLoaded);
+            
+            if (!allLoaded && !allPriorityLoaded && !forceRefresh) {
+                // Not all stores have data yet
+                return;
+            }
+            
+            // Combine receipts from all stores
+            let allReceipts = [];
+            let allPriorityReceipts = [];
+            let combinedCategories = {};
+            
+            INDIVIDUAL_STORES.forEach(store => {
+                const storeData = masterData[store];
+                if (storeData) {
+                    if (storeData.receipts && storeData.receipts.length > 0) {
+                        allReceipts = allReceipts.concat(storeData.receipts);
+                    }
+                    if (storeData._priorityReceipts && storeData._priorityReceipts.length > 0) {
+                        allPriorityReceipts = allPriorityReceipts.concat(storeData._priorityReceipts);
+                    }
+                    if (storeData._priorityCategories) {
+                        combinedCategories = { ...combinedCategories, ...storeData._priorityCategories };
+                    }
+                    if (storeData.productMap) {
+                        combinedCategories = { ...combinedCategories, ...storeData.productMap };
+                    }
+                }
+            });
+            
+            // Update 'all' store data
+            if (allReceipts.length > 0) {
+                allStoreData.receipts = allReceipts;
+            }
+            if (allPriorityReceipts.length > 0) {
+                allStoreData._priorityReceipts = allPriorityReceipts;
+            }
+            if (Object.keys(combinedCategories).length > 0) {
+                allStoreData._priorityCategories = combinedCategories;
+                allStoreData.productMap = combinedCategories;
+            }
+            
+            // Mark as loaded if all individual stores are loaded
+            if (allLoaded) {
+                allStoreData.loaded = true;
+                allStoreData._lastUpdated = Date.now();
+            }
+            if (allPriorityLoaded) {
+                allStoreData._priorityLoaded = true;
+            }
+            
+            // If this is the current store, update view
+            if (currentStore === 'all') {
+                productCategoryMap = combinedCategories;
+                rawReceiptsData = allReceipts.length > 0 ? allReceipts : allPriorityReceipts;
+                isDataLoaded = true;
+                updateView(false);
+            }
         }
         
         // ----- UPDATE VIEW -----
@@ -1374,32 +1285,32 @@
             let categoryMap = {};
             
             if (currentStore === 'all') {
-                // Combine data from all individual stores
-                INDIVIDUAL_STORES.forEach(store => {
-                    const sData = masterData[store];
-                    if (sData) {
-                        if (sData.receipts) {
-                            receipts = receipts.concat(sData.receipts);
-                        }
-                        if (sData._priorityReceipts && !storeData.loaded) {
-                            // Use priority receipts if full data not loaded
-                        }
-                        if (sData._priorityCategories) {
-                            categoryMap = { ...categoryMap, ...sData._priorityCategories };
-                        }
-                        if (sData.productMap) {
-                            categoryMap = { ...categoryMap, ...sData.productMap };
-                        }
-                    }
-                });
-                
-                // If storeData has receipts, use those (they are combined)
+                // If 'all' store has its own data, use it
                 if (storeData.receipts && storeData.receipts.length > 0) {
                     receipts = storeData.receipts;
                 } else if (storeData._priorityReceipts && storeData._priorityReceipts.length > 0) {
                     receipts = storeData._priorityReceipts;
+                } else {
+                    // Combine from individual stores on the fly
+                    INDIVIDUAL_STORES.forEach(store => {
+                        const sData = masterData[store];
+                        if (sData) {
+                            if (sData.receipts && sData.receipts.length > 0) {
+                                receipts = receipts.concat(sData.receipts);
+                            } else if (sData._priorityReceipts && sData._priorityReceipts.length > 0) {
+                                receipts = receipts.concat(sData._priorityReceipts);
+                            }
+                            if (sData._priorityCategories) {
+                                categoryMap = { ...categoryMap, ...sData._priorityCategories };
+                            }
+                            if (sData.productMap) {
+                                categoryMap = { ...categoryMap, ...sData.productMap };
+                            }
+                        }
+                    });
                 }
                 
+                // Also get categories
                 if (storeData._priorityCategories) {
                     categoryMap = { ...categoryMap, ...storeData._priorityCategories };
                 }
@@ -1416,13 +1327,15 @@
                 rawReceiptsData = receipts;
             }
             
-            if (!storeData || (!storeData.loaded && !storeData._priorityLoaded && currentStore !== 'all')) {
+            // Check if we have data
+            const hasData = receipts && receipts.length > 0;
+            if (!hasData) {
                 // For 'all' store, check if any individual store has data
                 if (currentStore === 'all') {
-                    const hasData = INDIVIDUAL_STORES.some(store => 
+                    const hasIndividualData = INDIVIDUAL_STORES.some(store => 
                         masterData[store] && (masterData[store].loaded || masterData[store]._priorityLoaded)
                     );
-                    if (!hasData) {
+                    if (!hasIndividualData) {
                         showError("Data not loaded yet. Please wait or refresh.");
                         return;
                     }
@@ -1497,51 +1410,19 @@
             
             // Build chart data from filtered receipts
             const dailySales = {};
-            const hourlySales = {};
             effectiveReceipts.forEach(r => {
                 if (r.timestamp) {
                     const date = r.timestamp.split('T')[0];
                     dailySales[date] = (dailySales[date] || 0) + (parseFloat(r.total) || 0);
-                    
-                    // Also track hourly for today
-                    if (isTodayDate(date)) {
-                        const hour = new Date(r.timestamp).getHours();
-                        const hourKey = `${date} ${hour}:00`;
-                        hourlySales[hourKey] = (hourlySales[hourKey] || 0) + (parseFloat(r.total) || 0);
-                    }
                 }
             });
-            
             const sortedDates = Object.keys(dailySales).sort();
             const chartData = {
                 salesByDay: {
-                    labels: sortedDates,
-                    data: sortedDates.map(d => dailySales[d])
+                    labels: sortedDates.length > 0 ? sortedDates : [currentFrom],
+                    data: sortedDates.length > 0 ? sortedDates.map(d => dailySales[d]) : [0]
                 }
             };
-            
-            // Add hourly data if today is being viewed
-            const isTodayView = currentPresetType === 'day' && isTodayDate(currentFrom);
-            if (isTodayView && Object.keys(hourlySales).length > 0) {
-                const sortedHours = Object.keys(hourlySales).sort();
-                chartData.hourlyData = {
-                    labels: sortedHours.map(h => {
-                        const hour = parseInt(h.split(' ')[1]);
-                        return `${hour}:00`;
-                    }),
-                    data: sortedHours.map(h => hourlySales[h])
-                };
-            } else if (isTodayView) {
-                // Show empty hours for today if no data
-                const hours = [];
-                for (let i = 8; i <= 22; i++) {
-                    hours.push(`${i}:00`);
-                }
-                chartData.hourlyData = {
-                    labels: hours,
-                    data: hours.map(() => 0)
-                };
-            }
             
             // Update UI with filtered data
             updateUI({
@@ -1572,15 +1453,12 @@
             
             // For 'all' store, load priority data for all individual stores
             if (store === 'all') {
-                const priorityPromises = INDIVIDUAL_STORES.map((s, index) => {
-                    return loadPriorityData(s, forceRefresh).then(() => {
-                        const progress = ((index + 1) / INDIVIDUAL_STORES.length) * 50;
-                        showProgress(`Loading today's data for ${s}...`, progress);
-                    });
-                });
+                const priorityPromises = INDIVIDUAL_STORES.map(s => loadPriorityData(s, forceRefresh));
                 await Promise.all(priorityPromises);
-                combineAllStoresData();
-                showProgress('All stores combined', 50);
+                combineAllStoresData(true);
+                if (currentStore === 'all') {
+                    updateView(false);
+                }
                 return masterData['all'];
             }
             
@@ -1588,18 +1466,18 @@
             if (storeData._priorityLoaded && !forceRefresh) return storeData;
             
             storeData._loading = true;
-            if (dataFreshness) {
-                dataFreshness.className = 'data-freshness loading';
-                dataFreshness.textContent = `⚡ Loading today's data for ${store}...`;
-            }
-            if (cacheBadge) cacheBadge.className = 'badge-dot loading';
+            const displayName = STORE_DISPLAY_NAMES[store] || store;
+            showProgress(`📊 Loading today's data for ${displayName}...`, 100);
             
             try {
                 const todayStr = getTodayYMD();
                 
                 // Fetch only today's receipts first
+                updateProgress(20, 100, `📊 Fetching receipts for ${displayName}...`);
                 const receipts = await fetchRawReceipts(store, todayStr, todayStr);
+                updateProgress(60, 100, `📊 Fetching product categories for ${displayName}...`);
                 const categories = await fetchProductCategoryMap(store);
+                updateProgress(90, 100, `📊 Processing data for ${displayName}...`);
                 
                 storeData._priorityReceipts = receipts;
                 storeData._priorityCategories = categories;
@@ -1609,7 +1487,7 @@
                 
                 // If this is an individual store, update the 'all' store combination
                 if (INDIVIDUAL_STORES.includes(store)) {
-                    combineAllStoresData();
+                    combineAllStoresData(true);
                 }
                 
                 if (store === currentStore || currentStore === 'all') {
@@ -1621,34 +1499,30 @@
                 
                 // Save to cache after priority load
                 saveToCache();
+                updateProgress(100, 100, `✅ Today's data ready for ${displayName}`);
                 
-                showSuccess(`⚡ Priority load: Today's data ready for ${store} (${receipts ? receipts.length : 0} receipts)`);
+                showSuccess(`⚡ Priority load: Today's data ready for ${displayName} (${receipts ? receipts.length : 0} receipts)`);
                 setTimeout(() => { if (successDiv) successDiv.style.display = 'none'; }, 2000);
                 
                 return storeData;
             } catch (err) {
                 storeData._loading = false;
+                setProgressError(`Failed to load ${displayName}: ${err.message}`);
                 throw err;
             }
         }
         
         // ----- BACKGROUND LOAD: All remaining data -----
         async function loadBackgroundData(store, forceRefresh) {
-            if (backgroundLoadInProgress) return;
+            if (backgroundLoadInProgress && !forceRefresh) return;
             backgroundLoadInProgress = true;
             
             try {
                 // For 'all' store, load background data for all individual stores
                 if (store === 'all') {
-                    const bgPromises = INDIVIDUAL_STORES.map((s, index) => {
-                        return loadBackgroundData(s, forceRefresh).then(() => {
-                            const progress = 50 + ((index + 1) / INDIVIDUAL_STORES.length) * 50;
-                            showProgress(`Loading full data for ${s}...`, progress);
-                        });
-                    });
+                    const bgPromises = INDIVIDUAL_STORES.map(s => loadBackgroundData(s, forceRefresh));
                     await Promise.all(bgPromises);
-                    combineAllStoresData();
-                    showProgress('All stores combined - Complete!', 100);
+                    combineAllStoresData(true);
                     if (currentStore === 'all') {
                         updateView(false);
                     }
@@ -1662,22 +1536,22 @@
                     return;
                 }
                 
-                if (dataFreshness) {
-                    dataFreshness.className = 'data-freshness updating';
-                    dataFreshness.textContent = `⏳ Updating full data for ${store}...`;
-                }
+                const displayName = STORE_DISPLAY_NAMES[store] || store;
+                showProgress(`📊 Loading full data for ${displayName}...`, 100);
                 
                 const today = new Date();
                 const fromDate = new Date(today.getFullYear() - 2, 0, 1);
                 const from = formatYMD(fromDate);
                 const to = formatYMD(today);
                 
+                updateProgress(10, 100, `📊 Fetching sales report for ${displayName}...`);
                 const [sales, chart, employees, receipts] = await Promise.all([
-                    fetchApi('getSalesReport', store, from, to, null),
-                    fetchApi('getSalesChartData', store, from, to, null),
-                    fetchApi('getEmployeeSalesData', store, from, to, null),
+                    fetchApi('getSalesReport', store, from, to, null).then(r => { updateProgress(35, 100, `📊 Fetching sales chart for ${displayName}...`); return r; }),
+                    fetchApi('getSalesChartData', store, from, to, null).then(r => { updateProgress(55, 100, `📊 Fetching employee data for ${displayName}...`); return r; }),
+                    fetchApi('getEmployeeSalesData', store, from, to, null).then(r => { updateProgress(75, 100, `📊 Fetching receipts for ${displayName}...`); return r; }),
                     fetchRawReceipts(store, from, to)
                 ]);
+                updateProgress(90, 100, `📊 Processing data for ${displayName}...`);
                 
                 storeData.sales = sales;
                 storeData.chart = chart;
@@ -1688,7 +1562,7 @@
                 
                 // If this is an individual store, update the 'all' store combination
                 if (INDIVIDUAL_STORES.includes(store)) {
-                    combineAllStoresData();
+                    combineAllStoresData(true);
                 }
                 
                 if (store === currentStore || currentStore === 'all') {
@@ -1699,30 +1573,25 @@
                 
                 // Save to cache after background load
                 saveToCache();
+                updateProgress(100, 100, `✅ Full data loaded for ${displayName}`);
                 
-                showSuccess(`✅ Full data loaded for ${store} (${receipts ? receipts.length : 0} receipts)`);
+                showSuccess(`✅ Full data loaded for ${displayName} (${receipts ? receipts.length : 0} receipts)`);
                 setTimeout(() => { if (successDiv) successDiv.style.display = 'none'; }, 3000);
                 
             } catch (err) {
                 showError(`Background load failed for ${store}: ` + err.message);
+                setProgressError(`Failed to load full data: ${err.message}`);
             } finally {
                 backgroundLoadInProgress = false;
+                hideProgress();
             }
         }
         
         // ----- CHECK FOR MISSING DATA AND UPDATE -----
         function checkAndUpdateMissingData() {
             const todayStr = getTodayYMD();
-            let storesToCheck = 0;
-            let storesChecked = 0;
-            
-            // Count stores that need checking
-            INDIVIDUAL_STORES.forEach(store => {
-                const storeData = masterData[store];
-                if (storeData) {
-                    storesToCheck++;
-                }
-            });
+            let storesToLoad = 0;
+            let storesLoaded = 0;
             
             // Check each individual store for missing data
             INDIVIDUAL_STORES.forEach(store => {
@@ -1734,12 +1603,30 @@
                     const priorityReceipts = storeData._priorityReceipts || [];
                     const todayReceipts = filterDataByDateRange(priorityReceipts, todayStr, todayStr);
                     if (todayReceipts.length === 0) {
-                        loadPriorityData(store, true).catch(err => {
+                        storesToLoad++;
+                        loadPriorityData(store, true).then(() => {
+                            storesLoaded++;
+                            if (storesLoaded === storesToLoad) {
+                                combineAllStoresData(true);
+                                if (currentStore === 'all') {
+                                    updateView(false);
+                                }
+                            }
+                        }).catch(err => {
                             console.warn(`Failed to reload priority data for ${store}:`, err);
                         });
                     }
                 } else {
-                    loadPriorityData(store, false).catch(err => {
+                    storesToLoad++;
+                    loadPriorityData(store, false).then(() => {
+                        storesLoaded++;
+                        if (storesLoaded === storesToLoad) {
+                            combineAllStoresData(true);
+                            if (currentStore === 'all') {
+                                updateView(false);
+                            }
+                        }
+                    }).catch(err => {
                         console.warn(`Failed to load priority data for ${store}:`, err);
                     });
                 }
@@ -1758,22 +1645,15 @@
                         loadBackgroundData(store, false);
                     }
                 }
-                
-                storesChecked++;
-                const progress = (storesChecked / storesToCheck) * 100;
-                showProgress(`Checking store ${storesChecked}/${storesToCheck}...`, progress);
             });
             
-            // Update 'all' store combination
-            combineAllStoresData();
-            if (currentStore === 'all') {
-                updateView(false);
+            // If no stores to load, just combine and update
+            if (storesToLoad === 0) {
+                combineAllStoresData(true);
+                if (currentStore === 'all') {
+                    updateView(false);
+                }
             }
-            
-            setTimeout(hideProgress, 1000);
-            
-            // Check for new data after loading
-            setTimeout(checkForUpdates, 5000);
         }
         
         // ----- APPLY PRESET -----
@@ -1957,13 +1837,12 @@
                 );
                 
                 if (hasData) {
-                    combineAllStoresData();
+                    combineAllStoresData(true);
                     updateView(false);
                     // Check for updates
                     checkAndUpdateMissingData();
                 } else {
-                    // Load all stores with progress
-                    showProgress('Loading all stores...', 0);
+                    // Load all stores
                     loadPriorityData('all', false).then(() => {
                         updateView(false);
                         if (!masterData['all'].loaded) {
@@ -1997,7 +1876,6 @@
                     updateView(true);
                     checkAndUpdateMissingData();
                 } else {
-                    showProgress(`Loading ${name}...`, 0);
                     loadPriorityData(storeKey, false).then(() => {
                         if (!masterData[storeKey].loaded && !masterData[storeKey]._loading) {
                             loadBackgroundData(storeKey, false);
@@ -2010,82 +1888,66 @@
         }
         
         // ----- REFRESH (Force refresh all data) -----
-        async function refreshDashboard(showProgressBar = true) {
+        async function refreshDashboard() {
             if (refreshInProgress) return;
             refreshInProgress = true;
             if (refreshBtn) refreshBtn.classList.add('refresh-spin');
             if (errorDiv) errorDiv.style.display = 'none';
             
-            if (showProgressBar) {
-                showProgress('Refreshing all data...', 0);
-            }
-            
             try {
                 initializeMasterData();
                 
                 // Step 1: Load priority data for all individual stores first
+                showProgress('📊 Loading today\'s data for all stores...', 100);
+                let completed = 0;
+                const totalStores = INDIVIDUAL_STORES.length;
+                
                 const priorityPromises = INDIVIDUAL_STORES.map((store, index) => {
                     return loadPriorityData(store, true).then(() => {
-                        if (showProgressBar) {
-                            const progress = ((index + 1) / INDIVIDUAL_STORES.length) * 50;
-                            showProgress(`Loading today's data for ${store}...`, progress);
-                        }
+                        completed++;
+                        const pct = Math.round((completed / totalStores) * 100);
+                        updateProgress(pct, 100, `📊 Loading ${STORE_DISPLAY_NAMES[store]}... (${completed}/${totalStores})`);
                     });
                 });
                 await Promise.all(priorityPromises);
                 
                 // Step 2: Combine data for 'all' store
-                combineAllStoresData();
-                if (showProgressBar) showProgress('Combining store data...', 50);
+                updateProgress(90, 100, '📊 Combining data from all stores...');
+                combineAllStoresData(true);
                 
                 // Step 3: Trigger background loading for all individual stores
-                const bgPromises = INDIVIDUAL_STORES.map((store, index) => {
+                INDIVIDUAL_STORES.forEach(store => {
                     if (!masterData[store].loaded) {
-                        return loadBackgroundData(store, true).then(() => {
-                            if (showProgressBar) {
-                                const progress = 50 + ((index + 1) / INDIVIDUAL_STORES.length) * 50;
-                                showProgress(`Loading full data for ${store}...`, progress);
-                            }
-                        });
+                        loadBackgroundData(store, true);
                     }
-                    return Promise.resolve();
                 });
-                await Promise.all(bgPromises);
-                
-                // Final combine and update
-                combineAllStoresData();
                 
                 // If current store already has full data, update view
                 if (masterData[currentStore] && masterData[currentStore].loaded) {
                     updateView(false);
                 } else if (currentStore === 'all') {
                     // For 'all' store, check if we have combined data
-                    combineAllStoresData();
+                    combineAllStoresData(true);
                     if (masterData['all'] && masterData['all']._priorityLoaded) {
                         updateView(false);
                     }
                 }
                 
-                if (showProgressBar) {
-                    showProgress('Complete!', 100);
-                    setTimeout(hideProgress, 1000);
-                }
-                
                 // Save to cache
                 saveToCache();
+                updateProgress(100, 100, '✅ All data refreshed!');
+                hideProgress();
                 
                 showSuccess('✅ Data refreshed successfully!');
                 setTimeout(() => { if (successDiv) successDiv.style.display = 'none'; }, 3000);
                 
-                // Check for new data after refresh
-                setTimeout(checkForUpdates, 3000);
-                
             } catch (err) {
                 showError('Refresh failed: ' + err.message);
-                hideProgress();
+                setProgressError('Refresh failed: ' + err.message);
             } finally {
                 refreshInProgress = false;
                 if (refreshBtn) refreshBtn.classList.remove('refresh-spin');
+                setTimeout(hideProgress, 2000);
             }
         }
         
@@ -2107,13 +1969,8 @@
             closeReportModalBtn = document.getElementById('closeReportDownloadModal');
             generateReportBtn = document.getElementById('generateReportBtn');
             reportEmployeeSelect = document.getElementById('reportEmployeeSelect');
-            productsContainer = document.getElementById('productsList');
-            categoryContainer = document.getElementById('categorySalesList');
-            productTotalWarning = document.getElementById('productTotalWarning');
-            productTotalSuccess = document.getElementById('productTotalSuccess');
             dataFreshness = document.getElementById('dataFreshness');
             cacheBadge = document.getElementById('cacheBadge');
-            updateNotice = document.getElementById('updateNotice');
             
             receiptPdfBtn = document.getElementById('receiptPdfBtn');
             receiptPdfModal = document.getElementById('receiptPdfModal');
@@ -2148,10 +2005,6 @@
             updateDateLabel();
             if (storeNameSpan) storeNameSpan.innerText = "Queensbay Mall";
             
-            // Enable arrows initially
-            leftArrowBtn.disabled = false;
-            rightArrowBtn.disabled = true; // Can't go past today
-            
             // Try to load from cache first
             const hasCache = loadFromCache();
             
@@ -2174,21 +2027,11 @@
                 }, 500);
             } else {
                 // No cache, load fresh
-                refreshDashboard(true);
-            }
-            
-            // ---- UPDATE NOTICE CLICK ----
-            if (updateNotice) {
-                updateNotice.addEventListener('click', function() {
-                    this.classList.remove('visible');
-                    refreshDashboard(true);
-                });
+                refreshDashboard();
             }
             
             // ---- SETUP EVENT LISTENERS ----
-            if (refreshBtn) refreshBtn.addEventListener('click', function() {
-                refreshDashboard(true);
-            });
+            if (refreshBtn) refreshBtn.addEventListener('click', refreshDashboard);
             
             if (leftArrowBtn) leftArrowBtn.addEventListener('click', () => shiftDateRange('left'));
             if (rightArrowBtn) rightArrowBtn.addEventListener('click', () => shiftDateRange('right'));
@@ -2221,20 +2064,18 @@
             
             // Chart toggle
             document.querySelectorAll('.toggle-btn').forEach(btn => {
-                btn.addEventListener('click', function() { 
+                btn.addEventListener('click', () => { 
                     document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active')); 
-                    this.classList.add('active'); 
-                    currentChartType = this.getAttribute('data-chart-type'); 
-                    // Re-render chart with current data
-                    if (lastChartResponseData) {
-                        renderChartWithData(lastChartResponseData);
-                    } else if (trendChart && trendChart.data) {
-                        const labels = trendChart.data.labels;
-                        const data = trendChart.data.datasets[0].data;
-                        renderChartWithData({ salesByDay: { labels, data } });
+                    btn.classList.add('active'); 
+                    currentChartType = btn.getAttribute('data-chart-type'); 
+                    if (lastChartData) {
+                        renderChartWithData(lastChartData); 
                     } else {
-                        // Try to get data from current view
-                        updateView(false);
+                        // Try to get data from existing chart
+                        const chartCanvas = document.getElementById('trendChart');
+                        if (chartCanvas && trendChart && trendChart.data) {
+                            renderChartWithData({ salesByDay: { labels: trendChart.data.labels, data: trendChart.data.datasets[0].data } });
+                        }
                     }
                 });
             });
@@ -2356,16 +2197,9 @@
             
             // ---- FETCH EMPLOYEES ----
             fetchAllEmployees();
-            
-            // ---- PERIODIC CHECK FOR NEW DATA (every 30 seconds) ----
-            setInterval(() => {
-                if (!refreshInProgress && !backgroundLoadInProgress) {
-                    checkForUpdates();
-                }
-            }, 30000);
         });
         
-        // ----- MODAL FUNCTIONS (defined after DOM ready) -----
+        // ----- MODAL FUNCTIONS -----
         function openStoreModal() { if (storeModal) storeModal.classList.add('active'); }
         function closeStoreModal() { if (storeModal) storeModal.classList.remove('active'); }
         function openDateModal() { 
@@ -2383,8 +2217,6 @@
             } 
             applyPreset(p); 
             closeDateModal(); 
-            // Update arrow states after preset change
-            updateArrowDisabledState();
         }
         
         function applyCustomRange() { 
@@ -2398,13 +2230,12 @@
             if (isFutureDate(fromVal)) { showError("Cannot select future start date."); return; } 
             applyPreset('custom', fromVal, toVal); 
             closeDateModal(); 
-            updateArrowDisabledState();
         }
         
         function openReceiptChoiceModal() { if (receiptChoiceModal) receiptChoiceModal.classList.add('active'); }
         function closeChoiceModalFunc() { if (receiptChoiceModal) receiptChoiceModal.classList.remove('active'); }
         
-        // ----- REPORT GENERATION (defined here for scope) -----
+        // ----- REPORT GENERATION (minimal, kept from original) -----
         function populateEmployeeDropdown() {
             if (!reportEmployeeSelect) return;
             if (allEmployeesList.length === 0) {
@@ -2560,8 +2391,6 @@
             loadingMsg.innerText = 'Generating report...';
             document.body.appendChild(loadingMsg);
             try {
-                const reportStore = 'all';
-                
                 // For 'all' store, combine receipts from all individual stores
                 let allReceipts = [];
                 INDIVIDUAL_STORES.forEach(store => {
@@ -2767,7 +2596,7 @@
             setTimeout(() => { if (successDiv) successDiv.style.display = 'none'; }, 3000);
         }
         
-        // ----- RECEIPT PDF FUNCTIONS -----
+        // ----- RECEIPT PDF FUNCTIONS (simplified) -----
         let currentReceiptStore = "queens";
         let currentReceiptStoreName = "Queensbay Mall";
         let currentReceiptPreset = "today";
@@ -2953,7 +2782,7 @@
             }
         }
         
-        // ----- IRS RECEIPT PDF -----
+        // ----- IRS RECEIPT PDF (simplified) -----
         let currentIrsStore = "queens";
         let currentIrsStoreName = "Queensbay Mall";
         let currentIrsPreset = "today";
