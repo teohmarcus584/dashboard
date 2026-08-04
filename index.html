@@ -44,6 +44,7 @@
         .refresh-icon .badge-dot.active { display: block; }
         .refresh-icon .badge-dot.loading { background: #f59e0b; animation: pulse-dot 1s ease-in-out infinite; }
         .refresh-icon .badge-dot.cached { background: #3b82f6; }
+        .refresh-icon .badge-dot.has-update { background: #f59e0b; animation: pulse-dot 0.5s ease-in-out infinite; }
         @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
         
         .store-selector-btn {
@@ -174,6 +175,7 @@
         .data-freshness.loading { background: #fef3c7; color: #92400e; animation: pulse-dot 1s ease-in-out infinite; }
         .data-freshness.priority { background: #dbeafe; color: #1e4668; animation: pulse-dot 0.8s ease-in-out infinite; }
         .data-freshness.updating { background: #fef3c7; color: #92400e; animation: pulse-dot 1s ease-in-out infinite; }
+        .data-freshness.checking { background: #fef3c7; color: #92400e; animation: pulse-dot 0.5s ease-in-out infinite; }
         
         .date-range-display {
             font-size: 0.8rem;
@@ -241,6 +243,25 @@
             color: #4a627a;
             z-index: 1;
         }
+
+        .update-notice {
+            background: #fef3c7;
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 0.7rem;
+            color: #92400e;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            border: 1px solid #f59e0b;
+        }
+        .update-notice.visible {
+            display: inline-flex;
+        }
+        .update-notice:hover {
+            background: #fde68a;
+        }
     </style>
 </head>
 <body>
@@ -250,9 +271,9 @@
         <span class="badge-dot" id="cacheBadge"></span>
     </button>
     <div class="date-control">
-        <button class="arrow-btn" id="leftArrowBtn" disabled>←</button>
+        <button class="arrow-btn" id="leftArrowBtn">←</button>
         <button class="date-trigger-btn" id="dateTriggerBtn">📅 <span class="date-range-label" id="dateRangeLabel">Today</span></button>
-        <button class="arrow-btn" id="rightArrowBtn" disabled>→</button>
+        <button class="arrow-btn" id="rightArrowBtn">→</button>
     </div>
     <button class="store-selector-btn" id="storeSelectorBtn">
         <span>🏬</span>
@@ -264,7 +285,10 @@
     <div id="errorMsg" class="error-toast"></div>
     <div id="successMsg" class="success-toast"></div>
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;">
-        <span class="data-freshness" id="dataFreshness">Loading...</span>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span class="data-freshness" id="dataFreshness">Loading...</span>
+            <span class="update-notice" id="updateNotice">🔄 New data available - Click to refresh</span>
+        </div>
         <span class="date-range-display">📊 Showing: <span id="displayDateRange">Today</span></span>
     </div>
     
@@ -440,7 +464,7 @@
         const BACKEND_URL = "https://script.google.com/macros/s/AKfycbxPfPCmGXDDDakhgXVAr1wGKnqaVzWE3eAUYMBJtzT8WCYj3peHeXGbJD00RX7jqLl8LQ/exec";
         const POS_BACKEND_URL = "https://script.google.com/macros/s/AKfycbxPfPCmGXDDDakhgXVAr1wGKnqaVzWE3eAUYMBJtzT8WCYj3peHeXGbJD00RX7jqLl8LQ/exec";
         const CACHE_KEY = 'sales_dashboard_cache';
-        const CACHE_VERSION = 'v3';
+        const CACHE_VERSION = 'v4';
         
         // --- MASTER DATA CACHE ---
         let masterData = {};
@@ -451,6 +475,8 @@
         let loadingProgress = 0;
         let totalLoadingSteps = 0;
         let completedLoadingSteps = 0;
+        let lastDataCheck = 0;
+        let hasPendingUpdates = false;
         
         function getCacheKey() {
             return `${CACHE_KEY}_${CACHE_VERSION}`;
@@ -467,6 +493,9 @@
                     allEmployeesList: allEmployeesList
                 };
                 localStorage.setItem(getCacheKey(), JSON.stringify(cacheData));
+                hasPendingUpdates = false;
+                const notice = document.getElementById('updateNotice');
+                if (notice) notice.classList.remove('visible');
             } catch (e) {
                 console.warn('Failed to save cache:', e);
             }
@@ -686,13 +715,14 @@
         let dataUpdateNeeded = false;
         let totalStoresToLoad = INDIVIDUAL_STORES.length;
         let storesLoaded = 0;
+        let isCheckingForUpdates = false;
         
         // ----- DOM elements (will be initialized after DOM ready) -----
         let refreshBtn, leftArrowBtn, rightArrowBtn, dateTriggerBtn, storeSelectorBtn;
         let storeNameSpan, dateRangeLabelSpan, displayDateRangeSpan;
         let errorDiv, successDiv, downloadReportBtn, reportModal, closeReportModalBtn, generateReportBtn, reportEmployeeSelect;
         let productsContainer, categoryContainer, productTotalWarning, productTotalSuccess;
-        let dataFreshness, cacheBadge;
+        let dataFreshness, cacheBadge, updateNotice;
         let receiptPdfBtn, receiptPdfModal, closeReceiptModal, generateReceiptPdfBtn, receiptEmployeeSelect;
         let receiptStoreLabelSpan, receiptStoreSelectorPanel, receiptStoreOptionTrigger;
         let receiptChoiceModal, choiceStandard, choiceIRS, closeChoiceModal;
@@ -809,6 +839,61 @@
             } catch (err) { allEmployeesList = []; return allEmployeesList; }
         }
         
+        // ----- CHECK FOR NEW DATA -----
+        async function checkForUpdates() {
+            if (isCheckingForUpdates) return;
+            isCheckingForUpdates = true;
+            
+            try {
+                const todayStr = getTodayYMD();
+                let hasNewData = false;
+                
+                // Check each store for new data
+                for (const store of INDIVIDUAL_STORES) {
+                    const storeData = masterData[store];
+                    if (!storeData) continue;
+                    
+                    // Fetch latest receipts for today
+                    const latestReceipts = await fetchRawReceipts(store, todayStr, todayStr);
+                    
+                    // Compare with cached priority receipts
+                    const cachedReceipts = storeData._priorityReceipts || [];
+                    
+                    // Check if there are new transactions
+                    if (latestReceipts.length > cachedReceipts.length) {
+                        hasNewData = true;
+                        break;
+                    }
+                    
+                    // Also check if any receipt IDs are new
+                    const cachedIds = new Set(cachedReceipts.map(r => r.transaction_id || r.id));
+                    for (const receipt of latestReceipts) {
+                        const id = receipt.transaction_id || receipt.id;
+                        if (id && !cachedIds.has(id)) {
+                            hasNewData = true;
+                            break;
+                        }
+                    }
+                    if (hasNewData) break;
+                }
+                
+                if (hasNewData) {
+                    hasPendingUpdates = true;
+                    if (updateNotice) {
+                        updateNotice.classList.add('visible');
+                        updateNotice.textContent = '🔄 New transactions found - Click to refresh';
+                    }
+                    if (cacheBadge) {
+                        cacheBadge.className = 'badge-dot has-update';
+                    }
+                }
+            } catch (err) {
+                console.warn('Failed to check for updates:', err);
+            } finally {
+                isCheckingForUpdates = false;
+            }
+        }
+        
         function updateDateLabel() {
             if (!dateRangeLabelSpan || !displayDateRangeSpan) return;
             let label = '';
@@ -833,15 +918,19 @@
         
         function updateArrowDisabledState() {
             if (!leftArrowBtn || !rightArrowBtn) return;
+            
+            // Always enable left arrow (can always go back)
+            leftArrowBtn.disabled = false;
+            
+            // For custom range, disable right arrow
             if (currentPresetType === 'custom') { 
                 rightArrowBtn.disabled = true; 
-                leftArrowBtn.disabled = false;
                 return; 
             }
+            
+            // Check if we can go forward
             let nextRange = getAdjacentRange('next');
-            let prevRange = getAdjacentRange('prev');
             rightArrowBtn.disabled = !nextRange || isFutureDate(nextRange.from);
-            leftArrowBtn.disabled = !prevRange;
         }
         
         function getAdjacentRange(dir) {
@@ -1005,12 +1094,16 @@
                     vals = chartData.salesByDay.data;
                 }
                 if (labels.length > 0) {
-                    // Determine if we should show hours or days
+                    // Check if we're showing today - use hourly data
+                    const isToday = labels.length === 1 && isTodayDate(labels[0]);
                     let displayLabels = labels;
                     let displayVals = vals;
                     
-                    // If we have more than 31 data points, aggregate by week or month
-                    if (labels.length > 31) {
+                    if (isToday && chartData.hourlyData) {
+                        // Use hourly data for today
+                        displayLabels = chartData.hourlyData.labels;
+                        displayVals = chartData.hourlyData.data;
+                    } else if (labels.length > 31) {
                         // Aggregate by week
                         const weeklyData = {};
                         labels.forEach((label, index) => {
@@ -1025,16 +1118,12 @@
                         const sortedWeeks = Object.keys(weeklyData).sort();
                         displayLabels = sortedWeeks.map(w => `Week of ${w}`);
                         displayVals = sortedWeeks.map(w => weeklyData[w].total);
-                    } else if (labels.length > 7 && labels.length <= 31) {
-                        // Show daily
+                    } else {
+                        // Show daily with formatted dates
                         displayLabels = labels.map(d => {
                             const date = new Date(d);
                             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                         });
-                        displayVals = vals;
-                    } else {
-                        // Show daily
-                        displayLabels = labels;
                         displayVals = vals;
                     }
                     
@@ -1408,12 +1497,21 @@
             
             // Build chart data from filtered receipts
             const dailySales = {};
+            const hourlySales = {};
             effectiveReceipts.forEach(r => {
                 if (r.timestamp) {
                     const date = r.timestamp.split('T')[0];
                     dailySales[date] = (dailySales[date] || 0) + (parseFloat(r.total) || 0);
+                    
+                    // Also track hourly for today
+                    if (isTodayDate(date)) {
+                        const hour = new Date(r.timestamp).getHours();
+                        const hourKey = `${date} ${hour}:00`;
+                        hourlySales[hourKey] = (hourlySales[hourKey] || 0) + (parseFloat(r.total) || 0);
+                    }
                 }
             });
+            
             const sortedDates = Object.keys(dailySales).sort();
             const chartData = {
                 salesByDay: {
@@ -1421,6 +1519,29 @@
                     data: sortedDates.map(d => dailySales[d])
                 }
             };
+            
+            // Add hourly data if today is being viewed
+            const isTodayView = currentPresetType === 'day' && isTodayDate(currentFrom);
+            if (isTodayView && Object.keys(hourlySales).length > 0) {
+                const sortedHours = Object.keys(hourlySales).sort();
+                chartData.hourlyData = {
+                    labels: sortedHours.map(h => {
+                        const hour = parseInt(h.split(' ')[1]);
+                        return `${hour}:00`;
+                    }),
+                    data: sortedHours.map(h => hourlySales[h])
+                };
+            } else if (isTodayView) {
+                // Show empty hours for today if no data
+                const hours = [];
+                for (let i = 8; i <= 22; i++) {
+                    hours.push(`${i}:00`);
+                }
+                chartData.hourlyData = {
+                    labels: hours,
+                    data: hours.map(() => 0)
+                };
+            }
             
             // Update UI with filtered data
             updateUI({
@@ -1650,6 +1771,9 @@
             }
             
             setTimeout(hideProgress, 1000);
+            
+            // Check for new data after loading
+            setTimeout(checkForUpdates, 5000);
         }
         
         // ----- APPLY PRESET -----
@@ -1886,13 +2010,15 @@
         }
         
         // ----- REFRESH (Force refresh all data) -----
-        async function refreshDashboard() {
+        async function refreshDashboard(showProgressBar = true) {
             if (refreshInProgress) return;
             refreshInProgress = true;
             if (refreshBtn) refreshBtn.classList.add('refresh-spin');
             if (errorDiv) errorDiv.style.display = 'none';
             
-            showProgress('Refreshing all data...', 0);
+            if (showProgressBar) {
+                showProgress('Refreshing all data...', 0);
+            }
             
             try {
                 initializeMasterData();
@@ -1900,22 +2026,26 @@
                 // Step 1: Load priority data for all individual stores first
                 const priorityPromises = INDIVIDUAL_STORES.map((store, index) => {
                     return loadPriorityData(store, true).then(() => {
-                        const progress = ((index + 1) / INDIVIDUAL_STORES.length) * 50;
-                        showProgress(`Loading today's data for ${store}...`, progress);
+                        if (showProgressBar) {
+                            const progress = ((index + 1) / INDIVIDUAL_STORES.length) * 50;
+                            showProgress(`Loading today's data for ${store}...`, progress);
+                        }
                     });
                 });
                 await Promise.all(priorityPromises);
                 
                 // Step 2: Combine data for 'all' store
                 combineAllStoresData();
-                showProgress('Combining store data...', 50);
+                if (showProgressBar) showProgress('Combining store data...', 50);
                 
                 // Step 3: Trigger background loading for all individual stores
                 const bgPromises = INDIVIDUAL_STORES.map((store, index) => {
                     if (!masterData[store].loaded) {
                         return loadBackgroundData(store, true).then(() => {
-                            const progress = 50 + ((index + 1) / INDIVIDUAL_STORES.length) * 50;
-                            showProgress(`Loading full data for ${store}...`, progress);
+                            if (showProgressBar) {
+                                const progress = 50 + ((index + 1) / INDIVIDUAL_STORES.length) * 50;
+                                showProgress(`Loading full data for ${store}...`, progress);
+                            }
                         });
                     }
                     return Promise.resolve();
@@ -1936,14 +2066,19 @@
                     }
                 }
                 
-                showProgress('Complete!', 100);
-                setTimeout(hideProgress, 1000);
+                if (showProgressBar) {
+                    showProgress('Complete!', 100);
+                    setTimeout(hideProgress, 1000);
+                }
                 
                 // Save to cache
                 saveToCache();
                 
                 showSuccess('✅ Data refreshed successfully!');
                 setTimeout(() => { if (successDiv) successDiv.style.display = 'none'; }, 3000);
+                
+                // Check for new data after refresh
+                setTimeout(checkForUpdates, 3000);
                 
             } catch (err) {
                 showError('Refresh failed: ' + err.message);
@@ -1978,6 +2113,7 @@
             productTotalSuccess = document.getElementById('productTotalSuccess');
             dataFreshness = document.getElementById('dataFreshness');
             cacheBadge = document.getElementById('cacheBadge');
+            updateNotice = document.getElementById('updateNotice');
             
             receiptPdfBtn = document.getElementById('receiptPdfBtn');
             receiptPdfModal = document.getElementById('receiptPdfModal');
@@ -2012,6 +2148,10 @@
             updateDateLabel();
             if (storeNameSpan) storeNameSpan.innerText = "Queensbay Mall";
             
+            // Enable arrows initially
+            leftArrowBtn.disabled = false;
+            rightArrowBtn.disabled = true; // Can't go past today
+            
             // Try to load from cache first
             const hasCache = loadFromCache();
             
@@ -2034,11 +2174,21 @@
                 }, 500);
             } else {
                 // No cache, load fresh
-                refreshDashboard();
+                refreshDashboard(true);
+            }
+            
+            // ---- UPDATE NOTICE CLICK ----
+            if (updateNotice) {
+                updateNotice.addEventListener('click', function() {
+                    this.classList.remove('visible');
+                    refreshDashboard(true);
+                });
             }
             
             // ---- SETUP EVENT LISTENERS ----
-            if (refreshBtn) refreshBtn.addEventListener('click', refreshDashboard);
+            if (refreshBtn) refreshBtn.addEventListener('click', function() {
+                refreshDashboard(true);
+            });
             
             if (leftArrowBtn) leftArrowBtn.addEventListener('click', () => shiftDateRange('left'));
             if (rightArrowBtn) rightArrowBtn.addEventListener('click', () => shiftDateRange('right'));
@@ -2069,7 +2219,7 @@
             const applyCustomBtn = document.getElementById('applyCustomBtn');
             if (applyCustomBtn) applyCustomBtn.addEventListener('click', applyCustomRange);
             
-            // Chart toggle - FIXED: properly handle chart type switching
+            // Chart toggle
             document.querySelectorAll('.toggle-btn').forEach(btn => {
                 btn.addEventListener('click', function() { 
                     document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active')); 
@@ -2206,6 +2356,13 @@
             
             // ---- FETCH EMPLOYEES ----
             fetchAllEmployees();
+            
+            // ---- PERIODIC CHECK FOR NEW DATA (every 30 seconds) ----
+            setInterval(() => {
+                if (!refreshInProgress && !backgroundLoadInProgress) {
+                    checkForUpdates();
+                }
+            }, 30000);
         });
         
         // ----- MODAL FUNCTIONS (defined after DOM ready) -----
@@ -2226,6 +2383,8 @@
             } 
             applyPreset(p); 
             closeDateModal(); 
+            // Update arrow states after preset change
+            updateArrowDisabledState();
         }
         
         function applyCustomRange() { 
@@ -2239,6 +2398,7 @@
             if (isFutureDate(fromVal)) { showError("Cannot select future start date."); return; } 
             applyPreset('custom', fromVal, toVal); 
             closeDateModal(); 
+            updateArrowDisabledState();
         }
         
         function openReceiptChoiceModal() { if (receiptChoiceModal) receiptChoiceModal.classList.add('active'); }
